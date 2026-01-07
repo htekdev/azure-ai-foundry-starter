@@ -1,17 +1,17 @@
 ---
 name: environment-validation
-description: Validates the Azure DevOps migration environment prerequisites including tool versions, authentication status, connectivity, and resource availability. Use this when setting up or troubleshooting migration environment, checking prerequisites, or validating configuration before starting migration.
+description: Validates the Azure AI Foundry starter deployment environment prerequisites including tool versions, authentication status, connectivity, and resource availability. Use this when setting up or troubleshooting deployment environment, checking prerequisites, or validating configuration before starting deployment.
 ---
 
-# Environment Validation for Azure DevOps Migration
+# Environment Validation for Azure AI Foundry Starter
 
-This skill validates that your environment meets all prerequisites for executing the Azure DevOps repository migration process defined in COPILOT_EXECUTION_GUIDE.md.
+This skill validates that your environment meets all prerequisites for deploying the Azure AI Foundry starter template.
 
 ## When to use this skill
 
 Use this skill when you need to:
-- Validate environment setup before starting migration
-- Troubleshoot migration environment issues
+- Validate environment setup before starting deployment
+- Troubleshoot deployment environment issues
 - Verify tool installations and versions
 - Check authentication and connectivity
 - Confirm Azure resource availability
@@ -42,9 +42,9 @@ The skill validates the following components:
 
 ### 4. Azure Resources
 - Resource group existence and access
-- Azure Machine Learning workspace availability
-- Azure OpenAI service availability
-- Required RBAC permissions
+- Azure AI Foundry project availability
+- Service Principal with proper RBAC (Contributor + Cognitive Services User)
+- Required permissions for deployment
 
 ## Validation process
 

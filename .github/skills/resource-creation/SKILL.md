@@ -1,47 +1,41 @@
 ---
 name: resource-creation
-description: Creates and configures Azure resources required for the repository migration including Service Principals, ML workspaces, OpenAI services, and deployments. Use this when setting up Azure infrastructure, creating missing resources, or configuring resource permissions for migration.
+description: Creates and configures Azure resources required for the Azure AI Foundry starter deployment including Service Principals, AI Foundry projects, and proper RBAC configuration. Use this when setting up Azure infrastructure, creating missing resources, or configuring resource permissions for deployment.
 ---
 
-# Azure Resource Creation for Repository Migration
+# Azure Resource Creation for Azure AI Foundry Starter
 
-This skill automates the creation of Azure resources required for the Azure DevOps repository migration process. It checks for resource existence before creating and ensures proper configuration.
+This skill automates the creation of Azure resources required for the Azure AI Foundry starter template deployment. It checks for resource existence before creating and ensures proper configuration.
 
 ## When to use this skill
 
 Use this skill when you need to:
-- Create Azure resources required for migration
-- Set up Service Principals with proper RBAC permissions
-- Create Azure Machine Learning workspaces
-- Deploy Azure OpenAI services and models
+- Create Azure resources required for AI agent deployment
+- Set up Service Principals with proper RBAC permissions (Contributor + Cognitive Services User)
+- Create Azure AI Foundry projects
 - Configure resource access and permissions
-- Verify resource configuration before migration
+- Verify resource configuration before deployment
 
 ## Resources managed by this skill
 
 ### 1. Service Principal
-- Creates Service Principal for automated authentication
+- Creates Service Principal for workload identity federation
 - Assigns Contributor role to resource group
-- Generates and securely stores credentials
-- Configures federated credentials if needed
+- Assigns Cognitive Services User role (required for AI Foundry)
+- Configures federated credentials for Azure DevOps
 
-### 2. Azure Machine Learning Workspace
-- Creates ML workspace in specified resource group
-- Configures storage account, key vault, and application insights
-- Sets up workspace permissions
-- Enables required features
+### 2. Azure AI Foundry Project
+- Creates or validates AI Foundry project
+- Configures project endpoints for dev/test/prod
+- Sets up project permissions
+- Enables agent deployment capabilities
 
-### 3. Azure OpenAI Service
-- Creates Cognitive Services account for OpenAI
-- Deploys GPT-4 and GPT-3.5-turbo models
-- Configures capacity and rate limits
-- Sets up API keys and endpoints
-
-### 4. Supporting Resources
+### 3. Supporting Resources
 - Resource groups
-- Storage accounts
-- Key vaults
-- Application Insights instances
+- Role assignments (RBAC)
+- Federated identity credentials
+
+**Note**: This is a starter template - AI Foundry projects should typically be created through the Azure portal first, then referenced in configuration.
 
 ## Resource creation process
 
