@@ -64,7 +64,7 @@ param(
     [switch]$UseConfig,
 
     [Parameter(Mandatory = $false)]
-    [string]$ResourceGroupName,
+    [string]$ResourceGroupBaseName,
 
     [Parameter(Mandatory = $false)]
     [string]$Location = "eastus",
@@ -73,19 +73,17 @@ param(
     [string]$ServicePrincipalName,
 
     [Parameter(Mandatory = $false)]
-    [string]$MLWorkspaceName,
+    [string]$AIProjectBaseName,
 
     [Parameter(Mandatory = $false)]
-    [string]$OpenAIServiceName,
+    [ValidateSet('dev', 'test', 'prod', 'all')]
+    [string]$Environment = 'all',
 
     [Parameter(Mandatory = $false)]
     [bool]$CreateServicePrincipal = $false,
 
     [Parameter(Mandatory = $false)]
-    [bool]$CreateMLWorkspace = $false,
-
-    [Parameter(Mandatory = $false)]
-    [bool]$CreateOpenAI = $false,
+    [bool]$CreateAIProjects = $false,
 
     [Parameter(Mandatory = $false)]
     [switch]$CreateAll,
@@ -125,19 +123,18 @@ $results = @{
 # Load configuration if UseConfig is specified
 if ($UseConfig) {
     . "$PSScriptRoot/../configuration-management/config-functions.ps1"
-    $config = Get-MigrationConfig
+    $config = Get-StarterConfig
     
     if ($config) {
-        $ResourceGroupName = $config.azure.resourceGroupName
+        $ResourceGroupBaseName = $config.azure.resourceGroup
         $Location = $config.azure.location
-        $ServicePrincipalName = $config.servicePrincipal.name
-        $MLWorkspaceName = $config.azure.mlWorkspaceName
-        $OpenAIServiceName = $config.azure.openAIServiceName
+        $ServicePrincipalName = "sp-$ResourceGroupBaseName"
+        $AIProjectBaseName = $ResourceGroupBaseName
         
-        Write-Host "✅ Loaded configuration from migration-config.json" -ForegroundColor Green
+        Write-Host "✅ Loaded configuration from starter-config.json" -ForegroundColor Green
     }
     else {
-        Write-Error "Could not load configuration. Run: ../configuration-management/configure-migration.ps1 -Interactive"
+        Write-Error "Could not load configuration. Run: ../configuration-management/configure-starter.ps1 -Interactive"
         exit 1
     }
 }
@@ -145,19 +142,27 @@ if ($UseConfig) {
 # Set flags if CreateAll is specified
 if ($CreateAll) {
     $CreateServicePrincipal = $true
-    $CreateMLWorkspace = $true
-    $CreateOpenAI = $true
+    $CreateAIProjects = $true
 }
 
 # Validate required parameters
-if (-not $ResourceGroupName) {
-    Write-Error "ResourceGroupName is required. Use -UseConfig or specify -ResourceGroupName"
+if (-not $ResourceGroupBaseName) {
+    Write-Error "ResourceGroupBaseName is required. Use -UseConfig or specify -ResourceGroupBaseName"
     exit 1
 }
 
-Write-Host "=== Azure Resource Creation ===" -ForegroundColor Cyan
-Write-Host "Resource Group: $ResourceGroupName" -ForegroundColor Gray
+# Determine which environments to create
+$environments = @()
+if ($Environment -eq 'all') {
+    $environments = @('dev', 'test', 'prod')
+} else {
+    $environments = @($Environment)
+}
+
+Write-Host "=== Azure AI Foundry Multi-Environment Resource Creation ===" -ForegroundColor Cyan
+Write-Host "Base Name: $ResourceGroupBaseName" -ForegroundColor Gray
 Write-Host "Location: $Location" -ForegroundColor Gray
+Write-Host "Environments: $($environments -join ', ')" -ForegroundColor Gray
 Write-Host ""
 
 # Helper function to add result
@@ -193,44 +198,50 @@ function Add-Result {
 }
 
 try {
-    # ===== CREATE RESOURCE GROUP =====
-    Write-Host "[Resource Group]" -ForegroundColor Yellow
-    try {
-        $rgExistsResult = az group exists --name $ResourceGroupName
-        if ($rgExistsResult -eq "true") {
-            Write-Host "  ✅ Resource group already exists" -ForegroundColor Green
-            Add-Result -Resource "ResourceGroup" -Name $ResourceGroupName -Status "Skipped" -Message "Already exists"
-        }
-        else {
-            Write-Host "  Creating resource group..." -ForegroundColor Gray
-            $rgJson = az group create `
-                --name $ResourceGroupName `
-                --location $Location `
-                --tags "Environment=Production" "Project=Migration" `
-                --only-show-errors 2>&1
-            
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  ✅ Resource group created successfully" -ForegroundColor Green
-                Add-Result -Resource "ResourceGroup" -Name $ResourceGroupName -Status "Created" -Message "Created in $Location"
+    # ===== CREATE RESOURCE GROUPS =====
+    Write-Host "[Resource Groups]" -ForegroundColor Yellow
+    foreach ($env in $environments) {
+        $rgName = "$ResourceGroupBaseName-$env"
+        Write-Host "  Environment: $env" -ForegroundColor Cyan
+        try {
+            $rgExistsResult = az group exists --name $rgName
+            if ($rgExistsResult -eq "true") {
+                Write-Host "    ✅ Resource group already exists: $rgName" -ForegroundColor Green
+                Add-Result -Resource "ResourceGroup" -Name $rgName -Status "Skipped" -Message "Already exists"
             }
             else {
-                throw "Failed to create resource group"
+                Write-Host "    Creating resource group: $rgName..." -ForegroundColor Gray
+                $rgJson = az group create `
+                    --name $rgName `
+                    --location $Location `
+                    --tags "Environment=$env" "Project=AIFoundry" "ManagedBy=Starter" `
+                    --only-show-errors 2>&1
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "    ✅ Resource group created successfully" -ForegroundColor Green
+                    Add-Result -Resource "ResourceGroup" -Name $rgName -Status "Created" -Message "Created in $Location"
+                }
+                else {
+                    throw "Failed to create resource group"
+                }
             }
         }
-    }
-    catch {
-        Write-Host "  ❌ Failed to create resource group: $_" -ForegroundColor Red
-        Add-Result -Resource "ResourceGroup" -Name $ResourceGroupName -Status "Failed" -Message $_.Exception.Message
+        catch {
+            Write-Host "    ❌ Failed to create resource group: $_" -ForegroundColor Red
+            Add-Result -Resource "ResourceGroup" -Name $rgName -Status "Failed" -Message $_.Exception.Message
+        }
     }
     Write-Host ""
 
-    # Get subscription ID for RBAC
+    # Get subscription ID and tenant ID for RBAC
     $subscriptionId = az account show --query id -o tsv
+    $tenantId = az account show --query tenantId -o tsv
 
     # ===== CREATE SERVICE PRINCIPAL =====
     if ($CreateServicePrincipal -and $ServicePrincipalName) {
-        Write-Host "[Service Principal with RBAC (Federated creds created later)]" -ForegroundColor Yellow
+        Write-Host "[Service Principal with RBAC for All Environments]" -ForegroundColor Yellow
         Write-Host "  Using workload identity federation (no secrets)" -ForegroundColor Cyan
+        Write-Host "  Will grant access to all environment resource groups" -ForegroundColor Gray
         try {
             # Check if app already exists
             $appListJson = az ad app list --display-name $ServicePrincipalName --only-show-errors 2>&1
@@ -264,30 +275,38 @@ try {
                         if ($LASTEXITCODE -eq 0) {
                             Write-Host "  ✅ Service principal created" -ForegroundColor Green
                             
-                            # Step 3: Grant RBAC permissions
-                            Write-Host "  Granting Contributor role..." -ForegroundColor Gray
-                            $scope = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName"
-                            az role assignment create `
-                                --assignee $appId `
-                                --role "Contributor" `
-                                --scope $scope `
-                                --only-show-errors 2>&1 | Out-Null
+                            # Step 3: Grant RBAC permissions to ALL environment resource groups
+                            Write-Host "  Granting permissions to all environments..." -ForegroundColor Gray
                             
-                            if ($LASTEXITCODE -eq 0) {
-                                Write-Host "  ✅ Contributor role assigned" -ForegroundColor Green
-                            }
-                            
-                            # Step 4: Assign Cognitive Services User role (required for AI Foundry)
-                            Write-Host "  Assigning Cognitive Services User role..." -ForegroundColor Gray
-                            
-                            az role assignment create `
-                                --assignee $appId `
-                                --role "Cognitive Services User" `
-                                --scope "/subscriptions/$($config.azure.subscriptionId)/resourceGroups/$ResourceGroupName" `
-                                --only-show-errors 2>&1 | Out-Null
-                            
-                            if ($LASTEXITCODE -eq 0) {
-                                Write-Host "  ✅ Cognitive Services User role assigned" -ForegroundColor Green
+                            foreach ($env in $environments) {
+                                $rgName = "$ResourceGroupBaseName-$env"
+                                $scope = "/subscriptions/$subscriptionId/resourceGroups/$rgName"
+                                
+                                Write-Host "    Environment: $env" -ForegroundColor Cyan
+                                
+                                # Contributor role
+                                Write-Host "      Assigning Contributor role..." -ForegroundColor Gray
+                                az role assignment create `
+                                    --assignee $appId `
+                                    --role "Contributor" `
+                                    --scope $scope `
+                                    --only-show-errors 2>&1 | Out-Null
+                                
+                                if ($LASTEXITCODE -eq 0) {
+                                    Write-Host "      ✅ Contributor role assigned" -ForegroundColor Green
+                                }
+                                
+                                # Cognitive Services User role
+                                Write-Host "      Assigning Cognitive Services User role..." -ForegroundColor Gray
+                                az role assignment create `
+                                    --assignee $appId `
+                                    --role "Cognitive Services User" `
+                                    --scope $scope `
+                                    --only-show-errors 2>&1 | Out-Null
+                                
+                                if ($LASTEXITCODE -eq 0) {
+                                    Write-Host "      ✅ Cognitive Services User role assigned" -ForegroundColor Green
+                                }
                             }
                             
                             Write-Host "" -ForegroundColor Yellow
@@ -302,8 +321,9 @@ try {
                             $appInfo = @{
                                 appId = $appId
                                 objectId = $appObjectId
-                                tenantId = $config.azure.tenantId
+                                tenantId = $tenantId
                                 displayName = $ServicePrincipalName
+                                environments = $environments
                                 federatedCredential = "To be created after service connection (see LESSONS_LEARNED.md #1)"
                             }
                             $appInfoFile = "$PSScriptRoot/sp-app-info-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
@@ -314,9 +334,10 @@ try {
                             $configPath = "$PSScriptRoot/../starter-config.json"
                             if (Test-Path $configPath) {
                                 try {
-                                    $configContent = Get-Content $configPath | ConvertFrom-Json
+                                    $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
                                     $configContent.servicePrincipal.appId = $appId
-                                    $configContent.servicePrincipal.tenantId = $config.azure.tenantId
+                                    $configContent.servicePrincipal.tenantId = $tenantId
+                                    $configContent.azure.subscriptionId = $subscriptionId
                                     $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
                                     $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
                                     Write-Host "  ✅ Configuration updated with SP AppId" -ForegroundColor Green
@@ -350,178 +371,143 @@ try {
         Write-Host ""
     }
 
-    # ===== CREATE ML WORKSPACE =====
-    if ($CreateMLWorkspace -and $MLWorkspaceName) {
-        Write-Host "[ML Workspace]" -ForegroundColor Yellow
-        try {
-            # Check if ML extension is installed
-            $extensionsJson = az extension list --only-show-errors 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                $extensions = $extensionsJson | ConvertFrom-Json
-                $mlExt = $extensions | Where-Object { $_.name -eq 'ml' }
+    # ===== CREATE AI FOUNDRY PROJECTS =====
+    if ($CreateAIProjects -and $AIProjectBaseName) {
+        Write-Host "[AI Foundry Projects]" -ForegroundColor Yellow
+        Write-Host "  Creating AI Foundry Hub and Projects for each environment" -ForegroundColor Cyan
+        
+        foreach ($env in $environments) {
+            $rgName = "$ResourceGroupBaseName-$env"
+            $hubName = "$AIProjectBaseName-hub-$env"
+            $projectName = "$AIProjectBaseName-project-$env"
+            $storageAccountName = ($AIProjectBaseName + "st" + $env).ToLower() -replace '[^a-z0-9]', ''
+            if ($storageAccountName.Length -gt 24) { $storageAccountName = $storageAccountName.Substring(0, 24) }
+            
+            Write-Host "  Environment: $env" -ForegroundColor Cyan
+            Write-Host "    Hub: $hubName" -ForegroundColor Gray
+            Write-Host "    Project: $projectName" -ForegroundColor Gray
+            try {
+                # Check if AI ML extension is installed
+                $extensionsJson = az extension list --only-show-errors 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    $extensions = $extensionsJson | ConvertFrom-Json
+                    $mlExt = $extensions | Where-Object { $_.name -eq 'ml' }
+                    
+                    if (-not $mlExt) {
+                        Write-Host "    Installing Azure ML extension..." -ForegroundColor Gray
+                        az extension add --name ml --only-show-errors 2>&1 | Out-Null
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-Host "    ✅ ML extension installed" -ForegroundColor Green
+                        }
+                    }
+                }
+
+                # Create Storage Account for AI Hub
+                Write-Host "    Creating storage account: $storageAccountName..." -ForegroundColor Gray
+                $storageJson = az storage account create `
+                    --name $storageAccountName `
+                    --resource-group $rgName `
+                    --location $Location `
+                    --sku Standard_LRS `
+                    --kind StorageV2 `
+                    --only-show-errors 2>&1
                 
-                if (-not $mlExt) {
-                    Write-Host "  Installing Azure ML extension..." -ForegroundColor Gray
-                    az extension add --name ml --only-show-errors 2>&1 | Out-Null
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Host "  ✅ ML extension installed" -ForegroundColor Green
-                    }
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "    ✅ Storage account created" -ForegroundColor Green
                 }
-            }
 
-            # Check if workspace exists using resource list (faster)
-            $workspaceJson = az resource list `
-                --resource-group $ResourceGroupName `
-                --resource-type "Microsoft.MachineLearningServices/workspaces" `
-                --name $MLWorkspaceName `
-                --only-show-errors 2>&1
-            
-            if ($LASTEXITCODE -eq 0) {
-                $workspace = $workspaceJson | ConvertFrom-Json
-                if ($workspace -and $workspace.Count -gt 0) {
-                    Write-Host "  ✅ ML Workspace already exists" -ForegroundColor Green
-                    Add-Result -Resource "MLWorkspace" -Name $MLWorkspaceName -Status "Skipped" -Message "Already exists"
-                }
-                else {
-                    # Create ML workspace
-                    Write-Host "  Creating ML workspace (this may take 2-3 minutes)..." -ForegroundColor Gray
-                    $wsJson = az ml workspace create `
-                        --resource-group $ResourceGroupName `
-                        --name $MLWorkspaceName `
-                        --location $Location `
-                        --description "ML workspace for repository migration" `
-                        --public-network-access Enabled `
-                        --only-show-errors 2>&1
-                    
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Host "  ✅ ML Workspace created successfully" -ForegroundColor Green
-                        Add-Result -Resource "MLWorkspace" -Name $MLWorkspaceName -Status "Created" -Message "Created in $Location"
+                # Check if hub exists
+                $hubJson = az ml workspace list `
+                    --resource-group $rgName `
+                    --query "[?name=='$hubName']" `
+                    --only-show-errors 2>&1
+                
+                if ($LASTEXITCODE -eq 0) {
+                    $hub = $hubJson | ConvertFrom-Json
+                    if ($hub -and $hub.Count -gt 0) {
+                        Write-Host "    ✅ AI Hub already exists" -ForegroundColor Green
+                        Add-Result -Resource "AIHub" -Name $hubName -Status "Skipped" -Message "Already exists"
                     }
                     else {
-                        throw "Failed to create ML workspace: $wsJson"
+                        # Create AI Foundry Hub
+                        Write-Host "    Creating AI Hub (this may take 2-3 minutes)..." -ForegroundColor Gray
+                        $hubJson = az ml workspace create `
+                            --resource-group $rgName `
+                            --name $hubName `
+                            --location $Location `
+                            --kind Hub `
+                            --description "AI Foundry Hub for $env environment" `
+                            --storage-account "/subscriptions/$subscriptionId/resourceGroups/$rgName/providers/Microsoft.Storage/storageAccounts/$storageAccountName" `
+                            --public-network-access Enabled `
+                            --only-show-errors 2>&1
+                        
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-Host "    ✅ AI Hub created successfully" -ForegroundColor Green
+                            Add-Result -Resource "AIHub" -Name $hubName -Status "Created" -Message "Created in $Location"
+                        }
+                        else {
+                            throw "Failed to create AI Hub: $hubJson"
+                        }
                     }
                 }
-            }
-        }
-        catch {
-            # Check if it actually succeeded despite the experimental warning
-            $checkJson = az resource list `
-                --resource-group $ResourceGroupName `
-                --resource-type "Microsoft.MachineLearningServices/workspaces" `
-                --name $MLWorkspaceName `
-                --only-show-errors 2>&1
-            
-            if ($LASTEXITCODE -eq 0) {
-                $check = $checkJson | ConvertFrom-Json
-                if ($check -and $check.Count -gt 0) {
-                    Write-Host "  ✅ ML Workspace created successfully (experimental warning can be ignored)" -ForegroundColor Green
-                    Add-Result -Resource "MLWorkspace" -Name $MLWorkspaceName -Status "Created" -Message "Created in $Location"
+
+                # Create AI Foundry Project
+                Write-Host "    Creating AI Project..." -ForegroundColor Gray
+                $projectJson = az ml workspace create `
+                    --resource-group $rgName `
+                    --name $projectName `
+                    --location $Location `
+                    --kind Project `
+                    --hub-id "/subscriptions/$subscriptionId/resourceGroups/$rgName/providers/Microsoft.MachineLearningServices/workspaces/$hubName" `
+                    --description "AI Foundry Project for $env environment" `
+                    --public-network-access Enabled `
+                    --only-show-errors 2>&1
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "    ✅ AI Project created successfully" -ForegroundColor Green
+                    Add-Result -Resource "AIProject" -Name $projectName -Status "Created" -Message "Created in $Location"
+                    
+                    # Get project endpoint and update config
+                    $projectDetails = az ml workspace show `
+                        --resource-group $rgName `
+                        --name $projectName `
+                        --query "discovery_url" `
+                        -o tsv `
+                        --only-show-errors 2>&1
+                    
+                    if ($LASTEXITCODE -eq 0 -and $projectDetails) {
+                        Write-Host "    Project Endpoint: $projectDetails" -ForegroundColor Gray
+                        
+                        # Update starter-config.json with project endpoint
+                        $configPath = "$PSScriptRoot/../starter-config.json"
+                        if (Test-Path $configPath) {
+                            try {
+                                $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
+                                $configContent.azure.aiFoundry.$env.projectEndpoint = $projectDetails
+                                $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
+                                $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
+                                Write-Host "    ✅ Configuration updated with project endpoint" -ForegroundColor Green
+                            }
+                            catch {
+                                Write-Host "    ⚠️  Failed to update config: $_" -ForegroundColor Yellow
+                            }
+                        }
+                    }
                 }
                 else {
-                    Write-Host "  ⚠️  Failed to create ML Workspace: $_" -ForegroundColor Yellow
-                    Write-Host "  This resource can be created manually if needed" -ForegroundColor Gray
-                    Add-Result -Resource "MLWorkspace" -Name $MLWorkspaceName -Status "Failed" -Message $_.Exception.Message
+                    throw "Failed to create AI Project: $projectJson"
                 }
             }
-            else {
-                Write-Host "  ⚠️  Failed to create ML Workspace: $_" -ForegroundColor Yellow
-                Write-Host "  This resource can be created manually if needed" -ForegroundColor Gray
-                Add-Result -Resource "MLWorkspace" -Name $MLWorkspaceName -Status "Failed" -Message $_.Exception.Message
+            catch {
+                Write-Host "    ⚠️  Failed to create AI resources for $env: $_" -ForegroundColor Yellow
+                Write-Host "    These resources can be created manually if needed" -ForegroundColor Gray
+                Add-Result -Resource "AIProject" -Name $projectName -Status "Failed" -Message $_.Exception.Message
             }
         }
         Write-Host ""
     }
 
-    # ===== CREATE OPENAI SERVICE =====
-    if ($CreateOpenAI -and $OpenAIServiceName) {
-        Write-Host "[OpenAI Service]" -ForegroundColor Yellow
-        try {
-            # Check if service exists
-            $openaiJson = az resource list `
-                --resource-group $ResourceGroupName `
-                --resource-type "Microsoft.CognitiveServices/accounts" `
-                --name $OpenAIServiceName `
-                --only-show-errors 2>&1
-            
-            if ($LASTEXITCODE -eq 0) {
-                $openai = $openaiJson | ConvertFrom-Json
-                if ($openai -and $openai.Count -gt 0) {
-                    Write-Host "  ✅ OpenAI Service already exists" -ForegroundColor Green
-                    Add-Result -Resource "OpenAIService" -Name $OpenAIServiceName -Status "Skipped" -Message "Already exists"
-                }
-                else {
-                    # Create OpenAI service
-                    Write-Host "  Creating OpenAI service..." -ForegroundColor Gray
-                    $openaiJson = az cognitiveservices account create `
-                        --resource-group $ResourceGroupName `
-                        --name $OpenAIServiceName `
-                        --location $Location `
-                        --kind "OpenAI" `
-                        --sku "S0" `
-                        --custom-domain $OpenAIServiceName `
-                        --only-show-errors 2>&1
-                    
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Host "  ✅ OpenAI Service created successfully" -ForegroundColor Green
-                        Add-Result -Resource "OpenAIService" -Name $OpenAIServiceName -Status "Created" -Message "Created in $Location"
-                        
-                        # Wait for service to be ready
-                        Write-Host "  Waiting for service to be ready..." -ForegroundColor Gray
-                        Start-Sleep -Seconds 10
-                        
-                        # Deploy GPT-4o model (current version)
-                        Write-Host "  Deploying GPT-4o model..." -ForegroundColor Gray
-                        az cognitiveservices account deployment create `
-                            --resource-group $ResourceGroupName `
-                            --name $OpenAIServiceName `
-                            --deployment-name "gpt-4o" `
-                            --model-name "gpt-4o" `
-                            --model-version "2024-11-20" `
-                            --model-format "OpenAI" `
-                            --sku-capacity 10 `
-                            --sku-name "Standard" `
-                            --only-show-errors 2>&1 | Out-Null
-                        
-                        if ($LASTEXITCODE -eq 0) {
-                            Write-Host "  ✅ GPT-4o model deployed" -ForegroundColor Green
-                        }
-                        else {
-                            Write-Host "  ⚠️  GPT-4o deployment failed, trying alternative..." -ForegroundColor Yellow
-                        }
-                        
-                        # Deploy GPT-4o-mini model (cost-effective alternative)
-                        Write-Host "  Deploying GPT-4o-mini model..." -ForegroundColor Gray
-                        az cognitiveservices account deployment create `
-                            --resource-group $ResourceGroupName `
-                            --name $OpenAIServiceName `
-                            --deployment-name "gpt-4o-mini" `
-                            --model-name "gpt-4o-mini" `
-                            --model-version "2024-07-18" `
-                            --model-format "OpenAI" `
-                            --sku-capacity 10 `
-                            --sku-name "Standard" `
-                            --only-show-errors 2>&1 | Out-Null
-                        
-                        if ($LASTEXITCODE -eq 0) {
-                            Write-Host "  ✅ GPT-4o-mini model deployed" -ForegroundColor Green
-                        }
-                        else {
-                            Write-Host "  ⚠️  GPT-4o-mini deployment failed" -ForegroundColor Yellow
-                        }
-                    }
-                    else {
-                        throw "Failed to create OpenAI service: $openaiJson"
-                    }
-                }
-            }
-        }
-        catch {
-            Write-Host "  ⚠️  Failed to create OpenAI Service: $_" -ForegroundColor Yellow
-            Write-Host "  This resource can be created manually if needed" -ForegroundColor Gray
-            Add-Result -Resource "OpenAIService" -Name $OpenAIServiceName -Status "Failed" -Message $_.Exception.Message
-        }
-        Write-Host ""
-    }
+
 
     # ===== SUMMARY =====
     Write-Host "=== Summary ===" -ForegroundColor Cyan
