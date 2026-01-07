@@ -276,6 +276,8 @@ try {
                             Write-Host "  ✅ Service principal created" -ForegroundColor Green
                             
                             # Step 3: Grant RBAC permissions to ALL environment resource groups
+                            # Per LESSONS_LEARNED #11: Cognitive Services User must be granted on
+                            # AI Services resources specifically, not just resource groups
                             Write-Host "  Granting permissions to all environments..." -ForegroundColor Gray
                             
                             foreach ($env in $environments) {
@@ -284,8 +286,8 @@ try {
                                 
                                 Write-Host "    Environment: $env" -ForegroundColor Cyan
                                 
-                                # Contributor role
-                                Write-Host "      Assigning Contributor role..." -ForegroundColor Gray
+                                # Contributor role on resource group (for resource management)
+                                Write-Host "      Assigning Contributor role on RG..." -ForegroundColor Gray
                                 az role assignment create `
                                     --assignee $appId `
                                     --role "Contributor" `
@@ -296,17 +298,8 @@ try {
                                     Write-Host "      ✅ Contributor role assigned" -ForegroundColor Green
                                 }
                                 
-                                # Cognitive Services User role
-                                Write-Host "      Assigning Cognitive Services User role..." -ForegroundColor Gray
-                                az role assignment create `
-                                    --assignee $appId `
-                                    --role "Cognitive Services User" `
-                                    --scope $scope `
-                                    --only-show-errors 2>&1 | Out-Null
-                                
-                                if ($LASTEXITCODE -eq 0) {
-                                    Write-Host "      ✅ Cognitive Services User role assigned" -ForegroundColor Green
-                                }
+                                # Note: Cognitive Services User role will be assigned after
+                                # AI Services resource is created (see AI Project creation section)
                             }
                             
                             Write-Host "" -ForegroundColor Yellow
@@ -444,6 +437,69 @@ try {
                         if ($LASTEXITCODE -eq 0) {
                             Write-Host "    ✅ AI Hub created successfully" -ForegroundColor Green
                             Add-Result -Resource "AIHub" -Name $hubName -Status "Created" -Message "Created in $Location"
+                            
+                            # AI Hub creation automatically creates an AI Services resource
+                            # Find and grant Cognitive Services User role (per LESSONS_LEARNED #11)
+                            Write-Host "    Finding associated AI Services resource..." -ForegroundColor Gray
+                            Start-Sleep -Seconds 5  # Give Azure time to create associated resources
+                            
+                            $aiServicesJson = az cognitiveservices account list `
+                                --resource-group $rgName `
+                                --query "[?kind=='AIServices']" `
+                                -o json `
+                                --only-show-errors 2>&1
+                            
+                            if ($LASTEXITCODE -eq 0 -and $aiServicesJson) {
+                                $aiServices = $aiServicesJson | ConvertFrom-Json
+                                if ($aiServices -and $aiServices.Count -gt 0) {
+                                    $aiServiceName = $aiServices[0].name
+                                    $aiServiceId = $aiServices[0].id
+                                    Write-Host "    Found AI Services: $aiServiceName" -ForegroundColor Gray
+                                    
+                                    # Grant Cognitive Services User role on AI Services resource
+                                    Write-Host "    Assigning Cognitive Services User role on AI Services..." -ForegroundColor Gray
+                                    
+                                    # Get Service Principal object ID if not already retrieved
+                                    if (-not $config) {
+                                        $spListJson = az ad sp list --display-name $ServicePrincipalName --only-show-errors 2>&1
+                                        if ($LASTEXITCODE -eq 0) {
+                                            $spList = $spListJson | ConvertFrom-Json
+                                            if ($spList -and $spList.Count -gt 0) {
+                                                $spAppId = $spList[0].appId
+                                            }
+                                        }
+                                    } else {
+                                        $spAppId = $config.servicePrincipal.appId
+                                        if (-not $spAppId -or $spAppId -eq '00000000-0000-0000-0000-000000000000') {
+                                            # Get from recently created SP
+                                            $spListJson = az ad sp list --display-name $ServicePrincipalName --only-show-errors 2>&1
+                                            if ($LASTEXITCODE -eq 0) {
+                                                $spList = $spListJson | ConvertFrom-Json
+                                                if ($spList -and $spList.Count -gt 0) {
+                                                    $spAppId = $spList[0].appId
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if ($spAppId) {
+                                        az role assignment create `
+                                            --assignee $spAppId `
+                                            --role "Cognitive Services User" `
+                                            --scope $aiServiceId `
+                                            --only-show-errors 2>&1 | Out-Null
+                                        
+                                        if ($LASTEXITCODE -eq 0) {
+                                            Write-Host "    ✅ Cognitive Services User role assigned to AI Services" -ForegroundColor Green
+                                        } else {
+                                            Write-Host "    ⚠️  Failed to assign Cognitive Services User role" -ForegroundColor Yellow
+                                            Write-Host "    You may need to assign this manually for agent operations" -ForegroundColor Gray
+                                        }
+                                    }
+                                } else {
+                                    Write-Host "    ⚠️  AI Services resource not found yet (may be creating)" -ForegroundColor Yellow
+                                }
+                            }
                         }
                         else {
                             throw "Failed to create AI Hub: $hubJson"
@@ -467,31 +523,73 @@ try {
                     Write-Host "    ✅ AI Project created successfully" -ForegroundColor Green
                     Add-Result -Resource "AIProject" -Name $projectName -Status "Created" -Message "Created in $Location"
                     
-                    # Get project endpoint and update config
-                    $projectDetails = az ml workspace show `
+                    # Get AI Foundry project endpoint (correct format per LESSONS_LEARNED #9)
+                    # Format: https://<ai-service-resource>.services.ai.azure.com/api/projects/<project-name>
+                    # This comes from the AI Services resource associated with the Hub
+                    
+                    Write-Host "    Retrieving AI Foundry project endpoint..." -ForegroundColor Gray
+                    
+                    # Get AI Services resource associated with the Hub
+                    $aiServicesJson = az cognitiveservices account list `
                         --resource-group $rgName `
-                        --name $projectName `
-                        --query "discovery_url" `
-                        -o tsv `
+                        --query "[?kind=='AIServices']" `
+                        -o json `
                         --only-show-errors 2>&1
                     
-                    if ($LASTEXITCODE -eq 0 -and $projectDetails) {
-                        Write-Host "    Project Endpoint: $projectDetails" -ForegroundColor Gray
+                    $projectEndpoint = $null
+                    
+                    if ($LASTEXITCODE -eq 0 -and $aiServicesJson) {
+                        try {
+                            $aiServices = $aiServicesJson | ConvertFrom-Json
+                            if ($aiServices -and $aiServices.Count -gt 0) {
+                                $aiServiceName = $aiServices[0].name
+                                $aiServiceProperties = $aiServices[0].properties
+                                
+                                # Construct AI Foundry project endpoint
+                                # Format: https://<ai-service>.services.ai.azure.com/api/projects/<project>
+                                if ($aiServiceProperties.endpoint) {
+                                    # Extract base endpoint and append project path
+                                    $baseEndpoint = $aiServiceProperties.endpoint.TrimEnd('/')
+                                    $projectEndpoint = "$baseEndpoint/api/projects/$projectName"
+                                } else {
+                                    # Construct from service name
+                                    $projectEndpoint = "https://$aiServiceName.services.ai.azure.com/api/projects/$projectName"
+                                }
+                                
+                                Write-Host "    AI Foundry Project Endpoint: $projectEndpoint" -ForegroundColor Gray
                         
-                        # Update starter-config.json with project endpoint
-                        $configPath = "$PSScriptRoot/../starter-config.json"
-                        if (Test-Path $configPath) {
-                            try {
-                                $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
-                                $configContent.azure.aiFoundry.$env.projectEndpoint = $projectDetails
-                                $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
-                                $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
-                                Write-Host "    ✅ Configuration updated with project endpoint" -ForegroundColor Green
-                            }
-                            catch {
-                                Write-Host "    ⚠️  Failed to update config: $_" -ForegroundColor Yellow
+                                # Update starter-config.json with correct AI Foundry project endpoint
+                                $configPath = "$PSScriptRoot/../starter-config.json"
+                                if (Test-Path $configPath) {
+                                    try {
+                                        $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
+                                        $configContent.azure.aiFoundry.$env.projectEndpoint = $projectEndpoint
+                                        $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
+                                        $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
+                                        Write-Host "    ✅ Configuration updated with AI Foundry project endpoint" -ForegroundColor Green
+                                    }
+                                    catch {
+                                        Write-Host "    ⚠️  Failed to update config: $_" -ForegroundColor Yellow
+                                    }
+                                }
+                            } else {
+                                Write-Host "    ⚠️  No AI Services found in resource group" -ForegroundColor Yellow
+                                Write-Host "    AI Hub should create AI Services automatically" -ForegroundColor Gray
                             }
                         }
+                        catch {
+                            Write-Host "    ⚠️  Failed to parse AI Services details: $_" -ForegroundColor Yellow
+                        }
+                    }
+                    
+                    if (-not $projectEndpoint) {
+                        Write-Host "    ⚠️  Could not auto-detect AI Foundry project endpoint" -ForegroundColor Yellow
+                        Write-Host "    You'll need to update starter-config.json manually:" -ForegroundColor Gray
+                        Write-Host "    1. Go to https://ai.azure.com" -ForegroundColor Cyan
+                        Write-Host "    2. Select project: $projectName" -ForegroundColor Cyan
+                        Write-Host "    3. Copy 'Project endpoint' from Overview" -ForegroundColor Cyan
+                        Write-Host "    4. Format: https://<resource>.services.ai.azure.com/api/projects/$projectName" -ForegroundColor Cyan
+                        Write-Host "    See: .github/skills/starter-execution/LESSONS_LEARNED.md #9" -ForegroundColor Gray
                     }
                 }
                 else {
