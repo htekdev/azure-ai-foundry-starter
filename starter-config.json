@@ -1,58 +1,33 @@
 {
   "azureDevOps": {
-    "organizationUrl": "https://dev.azure.com/hf-se-demos",
-    "projectName": "hf-se-demos",
-    "sourceRepository": "hf-se-demos",
-    "targetRepositories": [
-      "ml-training-pipeline",
-      "ml-inference-service",
-      "ml-data-processing",
-      "ml-model-registry",
-      "shared-libraries",
-      "infrastructure",
-      "documentation"
-    ],
-    "defaultBranch": "main"
+    "organizationUrl": "https://dev.azure.com/YOUR_ORG",
+    "projectName": "YOUR_PROJECT"
   },
   "azure": {
-    "subscriptionId": "86b6d0e0-2ecd-4842-ae88-859a6b2fd0fe",
-    "subscriptionName": "MCAPS-Hybrid-REQ-137898-2025-floreshector",
-    "tenantId": "16b3c013-d300-468d-ac64-7eda0820b6d3",
-    "resourceGroupName": "rg-floreshector-2123",
+    "subscriptionId": "00000000-0000-0000-0000-000000000000",
+    "subscriptionName": "YOUR_SUBSCRIPTION_NAME",
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "resourceGroup": "YOUR_RESOURCE_GROUP",
     "location": "eastus",
-    "mlWorkspaceName": "ml-workspace-hf-demos",
-    "openAIServiceName": "openai-hf-demos"
+    "aiFoundry": {
+      "dev": {
+        "projectEndpoint": "https://YOUR-DEV-PROJECT.services.ai.azure.com/api/projects/YOUR-DEV-PROJECT"
+      },
+      "test": {
+        "projectEndpoint": "https://YOUR-TEST-PROJECT.services.ai.azure.com/api/projects/YOUR-TEST-PROJECT"
+      },
+      "prod": {
+        "projectEndpoint": "https://YOUR-PROD-PROJECT.services.ai.azure.com/api/projects/YOUR-PROD-PROJECT"
+      }
+    }
   },
   "servicePrincipal": {
-    "name": "hf-demos-migration-sp",
-    "appId": "41a45ac7-ccef-470f-bc9d-427259b3f514",
-    "objectId": "50ba9d2d-34ce-48c9-aab1-db5ec8addd5c",
-    "roles": [
-      "Contributor"
-    ]
-  },
-  "pipelines": {
-    "variableGroups": {
-      "mlConfig": "ML-Configuration",
-      "openAIConfig": "OpenAI-Configuration"
-    },
-    "serviceConnections": {
-      "azure": "Azure-Production"
-    },
-    "agentPool": "Azure Pipelines",
-    "pipelinePrefix": "",
-    "pipelineSuffix": "-CI"
-  },
-  "migration": {
-    "backupDirectory": "./backups",
-    "workingDirectory": "./migration-temp",
-    "logFile": "./migration.log",
-    "verboseLogging": true,
-    "validateBeforeExecute": true
+    "appId": "00000000-0000-0000-0000-000000000000",
+    "tenantId": "00000000-0000-0000-0000-000000000000"
   },
   "metadata": {
-    "version": "1.0",
-    "createdDate": "2026-01-07 00:00:00",
-    "lastModified": "2026-01-07 00:00:00"
+    "version": "2.0",
+    "description": "Azure AI Foundry Starter Template Configuration",
+    "lastModified": "2026-01-07"
   }
 }

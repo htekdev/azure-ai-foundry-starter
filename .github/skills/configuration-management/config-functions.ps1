@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Configuration management functions for Azure DevOps migration.
+    Configuration management functions for Azure AI Foundry starter deployment.
 
 .DESCRIPTION
-    Provides helper functions to load, save, and manipulate migration configuration.
+    Provides helper functions to load, save, and manipulate starter configuration.
     These functions are designed to be dot-sourced by other scripts.
 
 .EXAMPLE
@@ -12,33 +12,33 @@
     . ./config-functions.ps1
     
     # Load configuration
-    $config = Get-MigrationConfig
+    $config = Get-StarterConfig
     
     # Access values
     $org = $config.azureDevOps.organizationUrl
 #>
 
-# Configuration file is now stored in repository root
-$script:ConfigFilePath = "$PSScriptRoot/../../../migration-config.json"
+# Configuration file is stored in .github/skills/ and repository root
+$script:ConfigFilePath = "$PSScriptRoot/../starter-config.json"
 
 <#
 .SYNOPSIS
-    Gets the migration configuration from file.
+    Gets the starter deployment configuration from file.
 
 .DESCRIPTION
-    Loads the migration-config.json file and returns the configuration object.
+    Loads the starter-config.json file and returns the configuration object.
 
 .PARAMETER Path
-    Optional custom path to configuration file. Defaults to ../migration-config.json
+    Optional custom path to configuration file. Defaults to ../starter-config.json
 
 .OUTPUTS
     PSCustomObject containing the configuration.
 
 .EXAMPLE
-    $config = Get-MigrationConfig
+    $config = Get-StarterConfig
     Write-Host $config.azureDevOps.organizationUrl
 #>
-function Get-MigrationConfig {
+function Get-StarterConfig {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
@@ -47,7 +47,7 @@ function Get-MigrationConfig {
 
     if (-not (Test-Path $Path)) {
         Write-Error "Configuration file not found at: $Path"
-        Write-Host "Run './configure-migration.ps1 -Interactive' to create configuration" -ForegroundColor Yellow
+        Write-Host "Run './configure-starter.ps1 -Interactive' to create configuration" -ForegroundColor Yellow
         return $null
     }
 

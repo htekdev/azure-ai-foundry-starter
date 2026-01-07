@@ -1,19 +1,19 @@
 ---
 name: configuration-management
-description: Manages centralized configuration for Azure DevOps migration including organization names, resource names, project names, and all other customizable values. Use this skill first to set up configuration, or when you need to retrieve/update migration settings.
+description: Manages centralized configuration for Azure AI Foundry starter deployment including organization names, resource names, project names, and all other customizable values. Use this skill first to set up configuration, or when you need to retrieve/update deployment settings.
 ---
 
-# Configuration Management for Azure DevOps Migration
+# Configuration Management for Azure AI Foundry Starter
 
-This skill manages all configurable names, URLs, and settings used throughout the migration process. It eliminates hardcoded values and provides a single source of truth for all migration configuration.
+This skill manages all configurable names, URLs, and settings used throughout the deployment process. It eliminates hardcoded values and provides a single source of truth for all deployment configuration.
 
 ## When to use this skill
 
 Use this skill when you need to:
-- Set up initial migration configuration
+- Set up initial deployment configuration
 - Update organization or project names
 - Define Azure resource names
-- Configure variable group names
+- Configure AI Foundry project endpoints
 - Retrieve configuration values for scripts
 - Validate configuration completeness
 - Reset or regenerate configuration
@@ -22,10 +22,10 @@ Use this skill when you need to:
 
 All configuration is stored in:
 ```
-.github/skills/migration-config.json
+.github/skills/starter-config.json
 ```
 
-This file is used by all other skills and should be created before starting the migration.
+This file is used by all other skills and should be created before starting the deployment.
 
 ## Quick start
 
@@ -35,10 +35,10 @@ Run the configuration script to interactively set up all values:
 
 ```powershell
 # Run interactive configuration
-./.github/skills/configuration-management/configure-migration.ps1 -Interactive
+./.github/skills/configuration-management/configure-starter.ps1 -Interactive
 
 # Or with Copilot
-# "@workspace Set up my migration configuration"
+# "@workspace Set up my Azure AI Foundry starter configuration"
 ```
 
 ### Load configuration in scripts
@@ -50,12 +50,13 @@ Use the helper function to load configuration in any PowerShell script:
 . ./.github/skills/configuration-management/config-functions.ps1
 
 # Load configuration
-$config = Get-MigrationConfig
+$config = Get-StarterConfig
 
 # Access values
 $org = $config.azureDevOps.organizationUrl
 $project = $config.azureDevOps.projectName
-$rgName = $config.azure.resourceGroupName
+$rgName = $config.azure.resourceGroup
+$devEndpoint = $config.azure.aiFoundry.dev.projectEndpoint
 ```
 
 ## Configuration structure
@@ -65,34 +66,23 @@ The configuration file contains the following sections:
 ### Azure DevOps settings
 - Organization URL
 - Project name
-- Source repository name
-- Target repository names
-- Default branch name
 
 ### Azure settings
 - Subscription ID
+- Subscription name
 - Tenant ID
 - Resource group name
 - Location/region
-- ML workspace name
-- OpenAI service name
+- AI Foundry project endpoints (dev, test, prod)
 
 ### Service Principal settings
-- Service principal name
-- Application ID (stored after creation)
-- Role assignments
+- Application ID
+- Tenant ID
 
-### Pipeline settings
-- Variable group names
-- Service connection names
-- Pipeline naming conventions
-- Agent pool settings
-
-### Migration settings
-- Backup location
-- Temporary working directory
-- Log file location
-- Validation preferences
+### Metadata
+- Version
+- Description
+- Last modified date
 
 ## Interactive configuration
 
