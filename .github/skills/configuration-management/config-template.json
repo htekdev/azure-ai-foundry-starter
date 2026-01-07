@@ -1,0 +1,56 @@
+{
+  "azureDevOps": {
+    "organizationUrl": "https://dev.azure.com/YOUR_ORG",
+    "projectName": "YOUR_PROJECT",
+    "sourceRepository": "YOUR_SOURCE_REPO",
+    "targetRepositories": [
+      "ml-training-pipeline",
+      "ml-inference-service",
+      "ml-data-processing",
+      "ml-model-registry",
+      "shared-libraries",
+      "infrastructure",
+      "documentation"
+    ],
+    "defaultBranch": "main"
+  },
+  "azure": {
+    "subscriptionId": "YOUR_SUBSCRIPTION_ID",
+    "tenantId": "YOUR_TENANT_ID",
+    "resourceGroupName": "YOUR_RESOURCE_GROUP",
+    "location": "eastus",
+    "mlWorkspaceName": "YOUR_ML_WORKSPACE",
+    "openAIServiceName": "YOUR_OPENAI_SERVICE"
+  },
+  "servicePrincipal": {
+    "name": "migration-sp",
+    "appId": null,
+    "roles": [
+      "Contributor"
+    ]
+  },
+  "pipelines": {
+    "variableGroups": {
+      "mlConfig": "ML-Configuration",
+      "openAIConfig": "OpenAI-Configuration"
+    },
+    "serviceConnections": {
+      "azure": "Azure-Production"
+    },
+    "agentPool": "Azure Pipelines",
+    "pipelinePrefix": "",
+    "pipelineSuffix": "-CI"
+  },
+  "migration": {
+    "backupDirectory": "./backups",
+    "workingDirectory": "./migration-temp",
+    "logFile": "./migration.log",
+    "verboseLogging": true,
+    "validateBeforeExecute": true
+  },
+  "metadata": {
+    "version": "1.0",
+    "createdDate": "",
+    "lastModified": ""
+  }
+}

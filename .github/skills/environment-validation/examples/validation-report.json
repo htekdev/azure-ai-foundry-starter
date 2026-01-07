@@ -1,0 +1,101 @@
+{
+  "Timestamp": "2026-01-07 10:30:00",
+  "Tools": {
+    "Git": {
+      "Status": "PASS",
+      "Value": "2.43.0",
+      "Expected": "2.30+",
+      "Message": "OK"
+    },
+    "Azure CLI": {
+      "Status": "PASS",
+      "Value": "2.55.0",
+      "Expected": "2.50+",
+      "Message": "OK"
+    },
+    "PowerShell": {
+      "Status": "PASS",
+      "Value": "7.4.1",
+      "Expected": "7.0+",
+      "Message": "OK"
+    },
+    "Python": {
+      "Status": "PASS",
+      "Value": "3.12.1",
+      "Expected": "3.11+",
+      "Message": "OK"
+    },
+    "Azure DevOps Extension": {
+      "Status": "PASS",
+      "Value": "1.0.1",
+      "Expected": "Latest",
+      "Message": "Installed"
+    }
+  },
+  "Authentication": {
+    "Azure Login": {
+      "Status": "PASS",
+      "Value": "user@northwind.com",
+      "Expected": "Authenticated",
+      "Message": "Subscription: Northwind Production"
+    },
+    "Bearer Token": {
+      "Status": "PASS",
+      "Value": "Valid (expires in 58 minutes)",
+      "Expected": "30+ minutes",
+      "Message": "OK"
+    }
+  },
+  "Connectivity": {
+    "Organization Access": {
+      "Status": "PASS",
+      "Value": "https://dev.azure.com/northwind-systems",
+      "Expected": "Accessible",
+      "Message": "5 projects found"
+    },
+    "Project Access": {
+      "Status": "PASS",
+      "Value": "repository-migration-project",
+      "Expected": "Accessible",
+      "Message": "ID: a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"
+    },
+    "Repository List": {
+      "Status": "PASS",
+      "Value": "15 repositories",
+      "Expected": "Accessible",
+      "Message": "OK"
+    },
+    "Pipeline List": {
+      "Status": "PASS",
+      "Value": "8 pipelines",
+      "Expected": "Accessible",
+      "Message": "OK"
+    }
+  },
+  "Resources": {
+    "Resource Group": {
+      "Status": "PASS",
+      "Value": "northwind-ml-rg (eastus)",
+      "Expected": "Exists",
+      "Message": "OK"
+    },
+    "ML Workspace": {
+      "Status": "PASS",
+      "Value": "northwind-ml-workspace",
+      "Expected": "Exists",
+      "Message": "OK"
+    },
+    "OpenAI Service": {
+      "Status": "PASS",
+      "Value": "northwind-openai",
+      "Expected": "Exists",
+      "Message": "SKU: S0"
+    }
+  },
+  "Summary": {
+    "Status": "READY",
+    "Passes": 15,
+    "Warnings": 0,
+    "Failures": 0
+  }
+}
