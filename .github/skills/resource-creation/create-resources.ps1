@@ -1,12 +1,16 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Creates and configures Azure resources required for repository migration.
+    Creates and configures Azure resources required for Azure AI Foundry starter deployment.
 
 .DESCRIPTION
     This script automates the creation of Azure resources including Service Principals,
-    ML workspaces, OpenAI services, and supporting infrastructure. It checks for resource
+    AI Foundry projects, and supporting infrastructure. It checks for resource
     existence before creating and ensures proper RBAC configuration.
+    
+    NOTE: Federated credentials are NOT created here. They must be created AFTER
+    Azure DevOps service connections are set up, using the actual issuer/subject
+    values from the service connection. See starter-execution/LESSONS_LEARNED.md #1.
 
 .PARAMETER UseConfig
     Load configuration from migration-config.json file
@@ -225,7 +229,7 @@ try {
 
     # ===== CREATE SERVICE PRINCIPAL =====
     if ($CreateServicePrincipal -and $ServicePrincipalName) {
-        Write-Host "[Service Principal with Federated Credentials]" -ForegroundColor Yellow
+        Write-Host "[Service Principal with RBAC (Federated creds created later)]" -ForegroundColor Yellow
         Write-Host "  Using workload identity federation (no secrets)" -ForegroundColor Cyan
         try {
             # Check if app already exists
@@ -273,36 +277,26 @@ try {
                                 Write-Host "  ✅ Contributor role assigned" -ForegroundColor Green
                             }
                             
-                            # Step 4: Add federated credential for Azure DevOps
-                            Write-Host "  Adding federated credential for Azure DevOps..." -ForegroundColor Gray
+                            # Step 4: Assign Cognitive Services User role (required for AI Foundry)
+                            Write-Host "  Assigning Cognitive Services User role..." -ForegroundColor Gray
                             
-                            # Get Azure DevOps organization info
-                            $orgUrl = $config.azureDevOps.organizationUrl
-                            $projectName = $config.azureDevOps.projectName
-                            $orgName = ($orgUrl -split '/')[-1]
-                            
-                            # Create federated credential JSON
-                            $fedCredJson = @{
-                                name = "AzureDevOpsFederation"
-                                issuer = "https://vstoken.dev.azure.com/$($config.azure.tenantId)"
-                                subject = "sc://$orgName/$projectName/Azure-Production"
-                                description = "Federated credential for Azure DevOps service connection"
-                                audiences = @("api://AzureADTokenExchange")
-                            } | ConvertTo-Json
-                            
-                            $fedCredFile = "$PSScriptRoot/fedcred-temp.json"
-                            $fedCredJson | Out-File -FilePath $fedCredFile -Encoding UTF8
-                            
-                            az ad app federated-credential create `
-                                --id $appObjectId `
-                                --parameters $fedCredFile `
+                            az role assignment create `
+                                --assignee $appId `
+                                --role "Cognitive Services User" `
+                                --scope "/subscriptions/$($config.azure.subscriptionId)/resourceGroups/$ResourceGroupName" `
                                 --only-show-errors 2>&1 | Out-Null
                             
-                            Remove-Item $fedCredFile -ErrorAction SilentlyContinue
-                            
                             if ($LASTEXITCODE -eq 0) {
-                                Write-Host "  ✅ Federated credential added (no secrets needed!)" -ForegroundColor Green
+                                Write-Host "  ✅ Cognitive Services User role assigned" -ForegroundColor Green
                             }
+                            
+                            Write-Host "" -ForegroundColor Yellow
+                            Write-Host "  ⚠️  IMPORTANT: Federated Credentials" -ForegroundColor Yellow
+                            Write-Host "  Federated credentials MUST be created AFTER service connections" -ForegroundColor Gray
+                            Write-Host "  are set up in Azure DevOps. You need the actual issuer and" -ForegroundColor Gray
+                            Write-Host "  subject values from the service connection." -ForegroundColor Gray
+                            Write-Host "  See: .github/skills/starter-execution/LESSONS_LEARNED.md #1" -ForegroundColor Cyan
+                            Write-Host "" -ForegroundColor Yellow
                             
                             # Save app info
                             $appInfo = @{
@@ -310,19 +304,20 @@ try {
                                 objectId = $appObjectId
                                 tenantId = $config.azure.tenantId
                                 displayName = $ServicePrincipalName
-                                federatedCredential = "Configured for Azure DevOps"
+                                federatedCredential = "To be created after service connection (see LESSONS_LEARNED.md #1)"
                             }
                             $appInfoFile = "$PSScriptRoot/sp-app-info-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
                             $appInfo | ConvertTo-Json | Out-File -FilePath $appInfoFile -Encoding UTF8
                             Write-Host "  App info saved to: $appInfoFile" -ForegroundColor Gray
                             
-                            # Update migration-config.json with Service Principal AppId
-                            $configPath = "$PSScriptRoot/../migration-config.json"
+                            # Update starter-config.json with Service Principal AppId
+                            $configPath = "$PSScriptRoot/../starter-config.json"
                             if (Test-Path $configPath) {
                                 try {
                                     $configContent = Get-Content $configPath | ConvertFrom-Json
                                     $configContent.servicePrincipal.appId = $appId
-                                    $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                                    $configContent.servicePrincipal.tenantId = $config.azure.tenantId
+                                    $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
                                     $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
                                     Write-Host "  ✅ Configuration updated with SP AppId" -ForegroundColor Green
                                 }
@@ -331,7 +326,7 @@ try {
                                 }
                             }
                             
-                            Add-Result -Resource "ServicePrincipal" -Name $ServicePrincipalName -Status "Created" -Message "AppId: $appId (Federated)"
+                            Add-Result -Resource "ServicePrincipal" -Name $ServicePrincipalName -Status "Created" -Message "AppId: $appId (Federated creds: create after service connection)"
                         }
                         else {
                             throw "Failed to create service principal from app"
