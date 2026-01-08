@@ -64,26 +64,26 @@ function Get-StarterConfig {
 
 <#
 .SYNOPSIS
-    Saves the migration configuration to file.
+    Saves the starter configuration to file.
 
 .DESCRIPTION
-    Saves the configuration object to migration-config.json.
+    Saves the configuration object to starter-config.json.
 
 .PARAMETER Config
     Configuration object to save.
 
 .PARAMETER Path
-    Optional custom path to configuration file. Defaults to ../migration-config.json
+    Optional custom path to configuration file. Defaults to ../../../starter-config.json
 
 .PARAMETER CreateBackup
     If specified, creates a backup of existing configuration before saving.
 
 .EXAMPLE
-    $config = Get-MigrationConfig
+    $config = Get-StarterConfig
     $config.azure.location = "westus"
-    Set-MigrationConfig -Config $config -CreateBackup
+    Set-StarterConfig -Config $config -CreateBackup
 #>
-function Set-MigrationConfig {
+function Set-StarterConfig {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -163,7 +163,7 @@ function Get-ConfigValue {
         [string]$ConfigPath = $script:ConfigFilePath
     )
 
-    $config = Get-MigrationConfig -Path $ConfigPath
+    $config = Get-StarterConfig -Path $ConfigPath
     if (-not $config) {
         return $Default
     }
@@ -216,7 +216,7 @@ function Set-ConfigValue {
         [string]$ConfigPath = $script:ConfigFilePath
     )
 
-    $config = Get-MigrationConfig -Path $ConfigPath
+    $config = Get-StarterConfig -Path $ConfigPath
     if (-not $config) {
         Write-Error "Cannot set value: configuration not found"
         return $false
@@ -242,7 +242,7 @@ function Set-ConfigValue {
     $current.$lastPart = $Value
 
     # Save configuration
-    return Set-MigrationConfig -Config $config -Path $ConfigPath
+    return Set-StarterConfig -Config $config -Path $ConfigPath
 }
 
 <#
@@ -275,13 +275,13 @@ function Test-ConfigurationComplete {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string[]]$Sections = @("azureDevOps", "azure", "servicePrincipal", "pipelines"),
+        [string[]]$Sections = @("azureDevOps", "azure", "servicePrincipal"),
 
         [Parameter(Mandatory = $false)]
         [string]$ConfigPath = $script:ConfigFilePath
     )
 
-    $config = Get-MigrationConfig -Path $ConfigPath
+    $config = Get-StarterConfig -Path $ConfigPath
     if (-not $config) {
         return $false
     }
@@ -290,10 +290,9 @@ function Test-ConfigurationComplete {
 
     # Define required fields for each section
     $requiredFields = @{
-        azureDevOps        = @("organizationUrl", "projectName", "sourceRepository", "targetRepositories")
-        azure              = @("subscriptionId", "tenantId", "resourceGroupName", "location")
-        servicePrincipal   = @("name")
-        pipelines          = @("variableGroups", "serviceConnections", "agentPool")
+        azureDevOps      = @("organizationUrl", "projectName")
+        azure            = @("subscriptionId", "tenantId", "resourceGroup", "location")
+        servicePrincipal = @("appId", "tenantId")
     }
 
     foreach ($section in $Sections) {
@@ -349,7 +348,7 @@ function Test-ConfigurationValidity {
         [string]$ConfigPath = $script:ConfigFilePath
     )
 
-    $config = Get-MigrationConfig -Path $ConfigPath
+    $config = Get-StarterConfig -Path $ConfigPath
     if (-not $config) {
         return @{ error = "Configuration not found" }
     }
@@ -397,14 +396,14 @@ function Test-ConfigurationValidity {
 
     # Test resource group
     try {
-        $rg = az group show --name $config.azure.resourceGroupName --only-show-errors 2>$null | ConvertFrom-Json
+        $rg = az group show --name "$($config.azure.resourceGroup)-dev" --only-show-errors 2>$null | ConvertFrom-Json
         
         if ($rg) {
             $results.resources.valid = $true
             $results.resources.message = "Resource group exists: $($rg.name) in $($rg.location)"
         }
         else {
-            $results.resources.message = "Resource group not found: $($config.azure.resourceGroupName)"
+            $results.resources.message = "Resource group not found: $($config.azure.resourceGroup)-dev"
         }
     }
     catch {
@@ -428,10 +427,10 @@ function Test-ConfigurationValidity {
     Optional custom path to configuration file.
 
 .EXAMPLE
-    Show-MigrationConfig
-    Show-MigrationConfig -Section "azureDevOps"
+    Show-StarterConfig
+    Show-StarterConfig -Section "azureDevOps"
 #>
-function Show-MigrationConfig {
+function Show-StarterConfig {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
@@ -441,12 +440,12 @@ function Show-MigrationConfig {
         [string]$ConfigPath = $script:ConfigFilePath
     )
 
-    $config = Get-MigrationConfig -Path $ConfigPath
+    $config = Get-StarterConfig -Path $ConfigPath
     if (-not $config) {
         return
     }
 
-    Write-Host "`n=== Migration Configuration ===" -ForegroundColor Cyan
+    Write-Host "`n=== Starter Configuration ===" -ForegroundColor Cyan
 
     if ($Section) {
         if ($config.PSObject.Properties.Name -contains $Section) {

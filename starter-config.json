@@ -1,33 +1,33 @@
 ﻿{
-    "azureDevOps":  {
-                        "organizationUrl":  "https://dev.azure.com/foundry-cicd-demo-01",
-                        "projectName":  "foundry-cicd-demo-01"
-                    },
+    "servicePrincipal":  {
+                             "appId":  "",
+                             "tenantId":  ""
+                         },
     "azure":  {
-                  "subscriptionId":  "86b6d0e0-2ecd-4842-ae88-859a6b2fd0fe",
-                  "subscriptionName":  "MCAPS-Hybrid-REQ-137898-2025-floreshector",
-                  "tenantId":  "16b3c013-d300-468d-ac64-7eda0820b6d3",
-                  "resourceGroup":  "rg-ai-foundry-starter",
+                  "subscriptionName":  "",
                   "location":  "eastus",
+                  "resourceGroup":  "",
+                  "subscriptionId":  "",
+                  "tenantId":  "",
                   "aiFoundry":  {
+                                    "prod":  {
+                                                 "projectEndpoint":  ""
+                                             },
                                     "dev":  {
-                                                "projectEndpoint":  "https://aif-foundry-dev.services.ai.azure.com/api/projects/aif-project-dev"
+                                                "projectEndpoint":  ""
                                             },
                                     "test":  {
-                                                 "projectEndpoint":  "https://aif-test-6654.services.ai.azure.com/api/projects/aif-project-test"
-                                             },
-                                    "prod":  {
-                                                 "projectEndpoint":  "https://aif-foundry-prod.services.ai.azure.com/api/projects/aif-project-prod"
+                                                 "projectEndpoint":  ""
                                              }
                                 }
               },
-    "servicePrincipal":  {
-                             "appId":  "f1ef8b31-1c6c-4892-8b10-3a280b951079",
-                             "tenantId":  "16b3c013-d300-468d-ac64-7eda0820b6d3"
-                         },
+    "azureDevOps":  {
+                        "projectName":  "",
+                        "organizationUrl":  ""
+                    },
     "metadata":  {
-                     "version":  "2.0",
                      "description":  "Azure AI Foundry Starter Template Configuration",
-                     "lastModified":  "2026-01-07"
+                     "version":  "2.0",
+                     "lastModified":  "2026-01-08"
                  }
 }
