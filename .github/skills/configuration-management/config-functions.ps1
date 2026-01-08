@@ -18,8 +18,8 @@
     $org = $config.azureDevOps.organizationUrl
 #>
 
-# Configuration file is stored in .github/skills/ and repository root
-$script:ConfigFilePath = "$PSScriptRoot/../starter-config.json"
+# Configuration file is stored at repository root
+$script:ConfigFilePath = "$PSScriptRoot/../../../starter-config.json"
 
 <#
 .SYNOPSIS

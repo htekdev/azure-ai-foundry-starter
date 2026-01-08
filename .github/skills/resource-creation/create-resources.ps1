@@ -324,7 +324,7 @@ try {
                             Write-Host "  App info saved to: $appInfoFile" -ForegroundColor Gray
                             
                             # Update starter-config.json with Service Principal AppId
-                            $configPath = "$PSScriptRoot/../starter-config.json"
+                            $configPath = "$PSScriptRoot/../../../starter-config.json"
                             if (Test-Path $configPath) {
                                 try {
                                     $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
@@ -559,7 +559,7 @@ try {
                                 Write-Host "    AI Foundry Project Endpoint: $projectEndpoint" -ForegroundColor Gray
                         
                                 # Update starter-config.json with correct AI Foundry project endpoint
-                                $configPath = "$PSScriptRoot/../starter-config.json"
+                                $configPath = "$PSScriptRoot/../../../starter-config.json"
                                 if (Test-Path $configPath) {
                                     try {
                                         $configContent = Get-Content $configPath -Raw | ConvertFrom-Json

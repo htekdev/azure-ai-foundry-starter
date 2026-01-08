@@ -20,9 +20,9 @@ Use this skill when you need to:
 
 ## Configuration file location
 
-All configuration is stored in:
+All configuration is stored at the repository root:
 ```
-.github/skills/starter-config.json
+starter-config.json
 ```
 
 This file is used by all other skills and should be created before starting the deployment.
