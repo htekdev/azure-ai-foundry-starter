@@ -1,55 +1,61 @@
 ---
 name: starter-execution
-description: Deploys the Azure AI Foundry starter application to Azure DevOps. This skill provides step-by-step instructions for deploying the ready-to-use template application, creating Azure DevOps resources (1 repo, 3 environments, service connections, variable groups), and setting up CI/CD pipelines. Use this to quickly start a new Azure AI Foundry project.
+description: Orchestrates complete Azure AI Foundry deployment to Azure DevOps. Coordinates repository-setup, service-connection-setup, environment-setup, pipeline-setup, and deployment-validation skills. Use when deploying the complete Azure AI Foundry starter template end-to-end.
+license: Apache-2.0
 ---
 
-# Starter Execution for Azure AI Foundry
+# Azure AI Foundry Starter Execution Orchestrator
 
-This skill provides **step-by-step instructions** for deploying the Azure AI Foundry starter template to Azure DevOps with proper environment configuration.
+Orchestrates the complete deployment of the Azure AI Foundry starter template to Azure DevOps by coordinating five specialized skills.
 
-## When to use this skill
+## Overview
 
-Use this skill when you need to:
-- Deploy the Azure AI Foundry starter application to Azure DevOps
-- Set up a new AI agent project from the template
-- Configure Azure DevOps repository, service connections, and variable groups
-- Set up environment-specific CI/CD pipelines (DEV/TEST/PROD)
-- Deploy your first AI agent to Azure AI Foundry
+End-to-end orchestration skill that coordinates five specialized skills to deploy the Azure AI Foundry starter template from `template-app/` to Azure DevOps.
 
-## Prerequisites
+### Prerequisites
 
-Before using this skill, ensure:
-- ✅ Configuration set up (use `configuration-management` skill FIRST)
-- ✅ Environment validation passed (use `environment-validation` skill)
-- ✅ All Azure resources created (use `resource-creation` skill with Service Principal)
-- ✅ Bearer token is valid (30+ minutes remaining)
-- ✅ Azure DevOps permissions configured
+Before using this orchestrator:
+1. ✅ **[configuration-management](../configuration-management)** - Configuration must be set up FIRST
+2. ✅ **[resource-creation](../resource-creation)** - Azure resources and Service Principal must exist
+3. ✅ **[environment-validation](../environment-validation)** - Environment prerequisites validated
+4. ✅ **Bearer token valid** - 30+ minutes remaining for deployment
+5. ✅ **Azure DevOps permissions** - Contributor access to target project
 
-## Deployment Overview
+### What Gets Created
 
-This deployment uses the ready-to-use template application in `template-app/` to quickly set up an Azure AI Foundry project.
+- **1 Repository**: `azure-ai-foundry-app` with template application code
+- **3 Service Connections**: dev/test/prod with Workload Identity Federation (no secrets!)
+- **3 Variable Groups**: `foundry-{env}-vars` with environment-specific configuration
+- **3 Environments**: dev, test, production with approval gates
+- **3+ Pipelines**: Agent creation, evaluation, and red team testing
 
-### What You'll Create
-- **1 Azure DevOps Repository** (with ready-to-deploy application code)
-- **3 Service Connections** (one per environment: dev, test, prod with federated credentials)
-- **3 Variable Groups** (one per environment with environment-specific configuration)
-- **3 Environments** (dev, test, production)
-- **2+ Pipelines** (agent creation and testing pipelines)
+### Orchestration Flow
 
-### Deployment Phases
+This orchestrator executes five specialized skills in sequence:
 
-1. **Phase 1: Preparation** - Authenticate, validate, configure
-2. **Phase 2: Repository Setup** - Create Azure DevOps repo and push template code
-3. **Phase 3: Azure DevOps Setup** - Create service connections with workload identity federation
-4. **Phase 4: Environment Configuration** - Create variable groups and environments
-5. **Phase 5: Pipeline Setup** - Create pipelines from template YAML files
-6. **Phase 6: Validation** - Deploy first agent and verify
+1. **[repository-setup](../repository-setup)** - Create Azure DevOps repository and push template code
+2. **[service-connection-setup](../service-connection-setup)** - Configure service connections with federated credentials
+3. **[environment-setup](../environment-setup)** - Create variable groups and environments
+4. **[pipeline-setup](../pipeline-setup)** - Create CI/CD pipelines from YAML templates
+5. **[deployment-validation](../deployment-validation)** - Validate complete deployment
 
-## Step-by-step execution
+## Usage
 
-**💡 Important**: This skill provides step-by-step instructions. Execute each command individually and verify success before proceeding.
+```powershell
+# Complete deployment (all phases)
+cd .github/skills/starter-execution
+# Follow Phase 1-6 commands below
 
-### Step 1: Load Configuration
+# Or execute individual skills as needed
+cd .github/skills/repository-setup
+# See individual skill documentation
+```
+
+## Deployment Workflow
+
+Execute these six phases in sequence for successful deployment:
+
+### Phase 1: Authentication & Configuration
 
 ```powershell
 # Load configuration
@@ -59,418 +65,279 @@ $config = Get-StarterConfig
 # Extract values
 $org = $config.azureDevOps.organizationUrl
 $project = $config.azureDevOps.projectName
-$targetRepo = "azure-ai-foundry-app"  # Your repository name
-```
 
-### Step 2: Authenticate
-
-```powershell
 # Login to Azure
 az login
 
 # Set subscription
 az account set --subscription $config.azure.subscriptionId
 
-# Get bearer token
+# Get bearer token (valid for ~1 hour)
 $env:ADO_TOKEN = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query "accessToken" -o tsv
 $env:AZURE_DEVOPS_EXT_PAT = $env:ADO_TOKEN
 
 # Configure Azure DevOps CLI
 az devops configure --defaults organization=$org project=$project
+
+Write-Host "✅ Authentication complete"
 ```
 
-### Step 3: Prepare Template Application
+### Phase 2: Repository Setup
 
+**Skill**: [repository-setup](../repository-setup)
+
+**Purpose**: Create Azure DevOps repository and push template application code
+
+**Key Actions**:
+- Create repository `azure-ai-foundry-app`
+- Initialize git and push template code from `template-app/`
+- Create `.env` file from `sample.env`
+
+**Direct Usage**:
 ```powershell
-# Navigate to template-app directory
-$templatePath = "$PSScriptRoot/../../../template-app"
-Set-Location $templatePath
-
-# Initialize git if not already initialized
-if (-not (Test-Path ".git")) {
-    git init
-    git add -A
-    git commit -m "Initial commit - Azure AI Foundry starter template"
-}
-
-# Create .env file from sample.env
-Copy-Item "sample.env" ".env"
-Write-Host "⚠️  IMPORTANT: Edit .env file with your Azure resource details"
+cd .github/skills/repository-setup
+# Follow skill documentation for detailed steps
 ```
 
-### Step 4: Create Azure DevOps Repository
-
+**Quick Validation**:
 ```powershell
-# Create repository for your application
-$repoName = $targetRepo
-
-$existingRepo = az repos list --query "[?name=='$repoName'].id" --output tsv
-
-if (-not $existingRepo) {
-    $repo = az repos create --name $repoName --output json | ConvertFrom-Json
-    Write-Host "✓ Repository created: $repoName"
-} else {
-    Write-Host "✓ Repository already exists: $repoName"
-}
-
-# Get repository details
-$repoDetails = az repos show --repository $repoName --output json | ConvertFrom-Json
-$remoteUrl = $repoDetails.remoteUrl
+az repos show --repository "azure-ai-foundry-app" -o table
 ```
 
-### Step 5: Push Template Code to Azure DevOps
+**Troubleshooting**: See [repository-setup/SKILL.md](../repository-setup/SKILL.md)
 
+### Phase 3: Service Connection Setup
+
+**Skill**: [service-connection-setup](../service-connection-setup)
+
+**Purpose**: Create service connections with Workload Identity Federation (passwordless, no secrets!)
+
+**Key Actions**:
+- Create 3 service connections: `azure-foundry-dev`, `azure-foundry-test`, `azure-foundry-prod`
+- Configure federated credentials on Service Principal
+- Authorize connections for all pipelines
+- Verify RBAC roles (Contributor + Cognitive Services User)
+
+**Critical**: Federated credential issuer/subject format must match Azure DevOps exactly!
+
+**Direct Usage**:
 ```powershell
-# Add Azure DevOps remote
-git remote add azure $remoteUrl
-
-# Configure git authentication
-git config --local http.extraheader "AUTHORIZATION: bearer $env:ADO_TOKEN"
-
-# Push code
-git push azure main
-
-# Remove auth header (security)
-git config --local --unset http.extraheader
-
-Write-Host "✓ Template code pushed to Azure DevOps"
+cd .github/skills/service-connection-setup
+# Follow skill documentation for detailed steps
 ```
 
-### Step 6: Create Service Connections with Workload Identity Federation
-
-**IMPORTANT:** Use REST API for federated credentials - Azure CLI does NOT support this!
-
+**Quick Validation**:
 ```powershell
-# Service connection configuration
-$environments = @("dev", "test", "prod")
-$spAppId = $config.servicePrincipal.appId
-$subscriptionId = $config.azure.subscriptionId
-$subscriptionName = $config.azure.subscriptionName
-$tenantId = $config.azure.tenantId
-
-# Get project ID
-$projectId = (az devops project show --project $project --output json | ConvertFrom-Json).id
-
-foreach ($env in $environments) {
-    $scName = "azure-foundry-$env"
-    
-    # Check if exists
-    $existingSc = az devops service-endpoint list --query "[?name=='$scName'].id" --output tsv
-    
-    if (-not $existingSc) {
-        # Create via REST API with federated credentials
-        $uri = "$org/$project/_apis/serviceendpoint/endpoints?api-version=7.1-preview.4"
-        
-        $body = @{
-            authorization = @{
-                parameters = @{
-                    serviceprincipalid = $spAppId
-                    tenantid = $tenantId
-                }
-                scheme = "WorkloadIdentityFederation"
-            }
-            data = @{
-                subscriptionId = $subscriptionId
-                subscriptionName = $subscriptionName
-            }
-            name = $scName
-            type = "azurerm"
-            url = "https://management.azure.com/"
-            serviceEndpointProjectReferences = @(
-                @{
-                    projectReference = @{
-                        id = $projectId
-                        name = $project
-                    }
-                    name = $scName
-                }
-            )
-        } | ConvertTo-Json -Depth 10
-        
-        Invoke-RestMethod -Uri $uri -Method Post -Headers @{
-            "Authorization" = "Bearer $env:ADO_TOKEN"
-            "Content-Type" = "application/json"
-        } -Body $body
-        
-        Write-Host "✓ Service connection created: $scName"
-        
-        # CRITICAL: Authorize the service connection for all pipelines
-        Start-Sleep -Seconds 2
-        $scId = az devops service-endpoint list --query "[?name=='$scName'].id" --output tsv
-        az devops service-endpoint update --id $scId --enable-for-all true
-        
-    } else {
-        Write-Host "✓ Service connection exists: $scName"
-    }
-}
+az devops service-endpoint list -o table
+az ad app federated-credential list --id $config.servicePrincipal.appId -o table
 ```
 
-### Step 7: Create Variable Groups (One Per Environment)
+**Troubleshooting**: See [service-connection-setup/SKILL.md](../service-connection-setup/SKILL.md)
 
-**IMPORTANT:** Variable group names must match exactly what's referenced in pipeline YAML files!
+### Phase 4: Environment Setup
 
+**Skill**: [environment-setup](../environment-setup)
+
+**Purpose**: Create variable groups and environments for all deployment stages
+
+**Key Actions**:
+- Create 3 variable groups: `foundry-dev-vars`, `foundry-test-vars`, `foundry-prod-vars`
+- Configure environment-specific variables (endpoints, model names, connection strings)
+- Create 3 environments: `dev`, `test`, `production`
+- Authorize variable groups for pipeline access
+
+**Critical**: Variable group names must match pipeline YAML exactly!
+
+**Direct Usage**:
 ```powershell
-# Create variable groups with environment-specific values from your .env and config
-$environments = @{
-    "dev" = @{
-        projectEndpoint = $config.azure.aiFoundry.dev.projectEndpoint
-        modelDeployment = "gpt-4o"
-        resourceGroup = $config.azure.resourceGroup
-    }
-    "test" = @{
-        projectEndpoint = $config.azure.aiFoundry.test.projectEndpoint
-        modelDeployment = "gpt-4o"
-        resourceGroup = $config.azure.resourceGroup
-    }
-    "prod" = @{
-        projectEndpoint = $config.azure.aiFoundry.prod.projectEndpoint
-        modelDeployment = "gpt-4o"
-        resourceGroup = $config.azure.resourceGroup
-    }
-}
-
-foreach ($env in $environments.Keys) {
-    $vgName = "foundry-$env-vars"
-    $envConfig = $environments[$env]
-    
-    $existingVg = az pipelines variable-group list --query "[?name=='$vgName'].id" --output tsv
-    
-    if (-not $existingVg) {
-        # Create variable group
-        $vgId = az pipelines variable-group create `
-            --name $vgName `
-            --variables `
-                AZURE_AI_PROJECT_ENDPOINT="$($envConfig.projectEndpoint)" `
-                AZURE_AI_MODEL_DEPLOYMENT_NAME="$($envConfig.modelDeployment)" `
-                AZURE_RESOURCE_GROUP="$($envConfig.resourceGroup)" `
-                AZURE_SUBSCRIPTION_ID="$subscriptionId" `
-            --authorize true `
-            --output json | ConvertFrom-Json | Select-Object -ExpandProperty id
-        
-        Write-Host "✓ Variable group created: $vgName (ID: $vgId)"
-    } else {
-        Write-Host "✓ Variable group exists: $vgName"
-    }
-}
+cd .github/skills/environment-setup
+# Follow skill documentation for detailed steps
 ```
 
-### Step 8: Create Environments
-
+**Quick Validation**:
 ```powershell
-# Create dev, test, production environments using REST API
-$envNames = @("dev", "test", "production")
-$uri = "$org/$project/_apis/distributedtask/environments?api-version=7.1-preview.1"
-
-foreach ($envName in $envNames) {
-    $existingEnvs = Invoke-RestMethod -Uri $uri -Headers @{
-        "Authorization" = "Bearer $env:ADO_TOKEN"
-    }
-    
-    $exists = $existingEnvs.value | Where-Object { $_.name -eq $envName }
-    
-    if (-not $exists) {
-        $body = @{
-            name = $envName
-            description = "$envName environment for foundry-cicd"
-        } | ConvertTo-Json
-        
-        Invoke-RestMethod -Uri $uri -Method Post -Headers @{
-            "Authorization" = "Bearer $env:ADO_TOKEN"
-            "Content-Type" = "application/json"
-        } -Body $body
-        
-        Write-Host "✓ Environment created: $envName"
-    } else {
-        Write-Host "✓ Environment exists: $envName"
-    }
-}
+az pipelines variable-group list -o table
+az pipelines environment list -o table
 ```
 
-### Step 9: Create Pipelines from Template
+**Troubleshooting**: See [environment-setup/SKILL.md](../environment-setup/SKILL.md)
 
+### Phase 5: Pipeline Setup
+
+**Skill**: [pipeline-setup](../pipeline-setup)
+
+**Purpose**: Create CI/CD pipelines from template YAML files
+
+**Key Actions**:
+- Create pipeline: `Azure AI Foundry - Create Agent`
+- Create pipeline: `Azure AI Foundry - Agent Evaluation`
+- Create pipeline: `Azure AI Foundry - Red Team`
+- Link pipelines to repository branch
+- Configure with `--skip-first-run` flag
+
+**Direct Usage**:
 ```powershell
-# Create pipelines from the template YAML files
-$pipelines = @(
-    @{ name = "Azure AI Foundry - Create Agent"; path = ".azure-pipelines/createagentpipeline.yml" }
-)
-
-foreach ($pipeline in $pipelines) {
-    $existingPipeline = az pipelines list --query "[?name=='$($pipeline.name)'].id" --output tsv
-    
-    if (-not $existingPipeline) {
-        az pipelines create `
-            --name "$($pipeline.name)" `
-            --repository $repoName `
-            --repository-type tfsgit `
-            --branch main `
-            --yml-path "$($pipeline.path)" `
-            --skip-first-run
-        
-        Write-Host "✓ Pipeline created: $($pipeline.name)"
-    } else {
-        Write-Host "✓ Pipeline exists: $($pipeline.name)"
-    }
-}
+cd .github/skills/pipeline-setup
+# Follow skill documentation for detailed steps
 ```
 
-### Step 10: Add Federated Credentials to Service Principal
-
-**CRITICAL:** This step is required for workload identity federation to work!
-
+**Quick Validation**:
 ```powershell
-# Add federated credentials for each environment
-$spObjectId = (az ad sp show --id $spAppId --query id -o tsv)
-
-foreach ($env in $environments) {
-    $credName = "azure-devops-$project-$env"
-    
-    # Check if credential already exists
-    $existingCred = az ad app federated-credential list --id $spAppId --query "[?name=='$credName'].name" -o tsv
-    
-    if (-not $existingCred) {
-        # Get service connection ID
-        $scName = "azure-foundry-$env"
-        $scId = az devops service-endpoint list --query "[?name=='$scName'].id" --output tsv
-        
-        $issuer = "$org/$project/_apis/serviceconnections/$scId"
-        $subject = "sc://$org/$project/$scName"
-        
-        az ad app federated-credential create `
-            --id $spAppId `
-            --parameters "{
-                \`"name\`": \`"$credName\`",
-                \`"issuer\`": \`"$issuer\`",
-                \`"subject\`": \`"$subject\`",
-                \`"audiences\`": [\`"api://AzureADTokenExchange\`"]
-            }"
-        
-        Write-Host "✓ Federated credential added: $credName"
-    } else {
-        Write-Host "✓ Federated credential exists: $credName"
-    }
-}
-
-Write-Host "`n⚠️  IMPORTANT: Ensure Service Principal has these RBAC roles:"
-Write-Host "  - Contributor (on resource group)"
-Write-Host "  - Cognitive Services User (on AI Foundry project)"
+az pipelines list -o table
 ```
 
-### Step 11: Validate Deployment
+**Troubleshooting**: See [pipeline-setup/SKILL.md](../pipeline-setup/SKILL.md)
 
+### Phase 6: Deployment Validation
+
+**Skill**: [deployment-validation](../deployment-validation)
+
+**Purpose**: Validate complete deployment and readiness for pipeline execution
+
+**Key Actions**:
+- Validate repository exists and has code
+- Validate service connections and federated credentials
+- Validate variable groups and environments
+- Validate pipelines are configured correctly
+- Verify RBAC permissions (Contributor + Cognitive Services User)
+- (Optional) Execute first pipeline run
+
+**Direct Usage**:
 ```powershell
-Write-Host "`n=== Deployment Validation ===" -ForegroundColor Cyan
-
-# Validate repository
-$repos = az repos list --output json | ConvertFrom-Json
-Write-Host "✓ Repositories: $($repos.Count)"
-
-# Validate service connections
-$connections = az devops service-endpoint list --output json | ConvertFrom-Json
-Write-Host "✓ Service connections: $($connections.Count)"
-
-# Validate variable groups
-$varGroups = az pipelines variable-group list --output json | ConvertFrom-Json
-Write-Host "✓ Variable groups: $($varGroups.Count)"
-
-# Validate environments
-$envs = az pipelines environment list --output json | ConvertFrom-Json
-Write-Host "✓ Environments: $($envs.Count)"
-
-# Validate pipelines
-$pipelines = az pipelines list --output json | ConvertFrom-Json
-Write-Host "✓ Pipelines: $($pipelines.Count)"
-
-Write-Host "`n✅ Deployment complete! Next: Run your first pipeline to deploy an agent."
+cd .github/skills/deployment-validation
+# Follow skill documentation for detailed steps
 ```
+
+**Quick Validation**:
+```powershell
+# Comprehensive validation
+az repos list -o table
+az devops service-endpoint list -o table
+az pipelines variable-group list -o table
+az pipelines environment list -o table
+az pipelines list -o table
+```
+
+**First Pipeline Run**:
+```powershell
+# Run Create Agent pipeline
+$pipelineId = az pipelines list --query "[?name=='Azure AI Foundry - Create Agent'].id" -o tsv
+az pipelines run --id $pipelineId
+
+# Monitor at: $config.azureDevOps.organizationUrl/$config.azureDevOps.projectName/_build
+```
+
+**Troubleshooting**: See [deployment-validation/SKILL.md](../deployment-validation/SKILL.md)
+
+## Specialized Skills
+
+This orchestrator delegates to five specialized skills:
+
+### 1. Repository Setup Skill
+**Location**: [../repository-setup](../repository-setup)  
+**Purpose**: Create Azure DevOps repository and push template application code  
+**When to Use**: Initial deployment or repository recreation
+
+### 2. Service Connection Setup Skill
+**Location**: [../service-connection-setup](../service-connection-setup)  
+**Purpose**: Configure service connections with Workload Identity Federation  
+**When to Use**: Initial deployment, fix federated credentials, add new environments
+
+### 3. Environment Setup Skill
+**Location**: [../environment-setup](../environment-setup)  
+**Purpose**: Create variable groups and environments  
+**When to Use**: Initial deployment, update variables, add new environments
+
+### 4. Pipeline Setup Skill
+**Location**: [../pipeline-setup](../pipeline-setup)  
+**Purpose**: Create CI/CD pipelines from YAML templates  
+**When to Use**: Initial deployment, add new pipelines, fix pipeline configuration
+
+### 5. Deployment Validation Skill
+**Location**: [../deployment-validation](../deployment-validation)  
+**Purpose**: Validate complete deployment readiness  
+**When to Use**: After each phase, troubleshooting, pre-deployment verification
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+For detailed troubleshooting, refer to the specific skill documentation:
 
-#### 1. Federated Credential Issuer/Subject Mismatch
-**Error:** `AADSTS70021: No matching federated identity record found`
-**Solution:**
+- **Repository Issues** → [repository-setup/SKILL.md](../repository-setup/SKILL.md#troubleshooting)
+- **Service Connection Issues** → [service-connection-setup/SKILL.md](../service-connection-setup/SKILL.md#troubleshooting)
+- **Variable/Environment Issues** → [environment-setup/SKILL.md](../environment-setup/SKILL.md#troubleshooting)
+- **Pipeline Issues** → [pipeline-setup/SKILL.md](../pipeline-setup/SKILL.md#troubleshooting)
+- **Validation Issues** → [deployment-validation/SKILL.md](../deployment-validation/SKILL.md#troubleshooting)
+
+### Common Issues
+
+**Symptom**: `AADSTS70021: No matching federated identity record found`  
+**Cause**: Federated credential issuer/subject mismatch  
+**Solution**: See [service-connection-setup troubleshooting](../service-connection-setup/SKILL.md#1-federated-credential-issuersubject-mismatch)
+
+**Symptom**: `The pipeline is not valid. Could not find service connection`  
+**Cause**: Service connection not authorized for pipeline use  
+**Solution**: See [service-connection-setup troubleshooting](../service-connection-setup/SKILL.md#2-service-connection-not-authorized)
+
+**Symptom**: `Variable group name contains invalid characters`  
+**Cause**: Invalid characters in variable group name  
+**Solution**: See [environment-setup troubleshooting](../environment-setup/SKILL.md#1-variable-group-name-contains-invalid-characters)
+
+**Symptom**: `401 Unauthorized` errors  
+**Cause**: Bearer token expired (valid for ~1 hour)  
+**Solution**:
 ```powershell
-# Verify issuer and subject match exactly
-$scId = az devops service-endpoint list --query "[?name=='azure-foundry-dev'].id" --output tsv
-$issuer = "$org/$project/_apis/serviceconnections/$scId"
-$subject = "sc://$org/$project/azure-foundry-dev"
-
-# Recreate credential with exact values
-az ad app federated-credential delete --id $spAppId --federated-credential-id $credId
-az ad app federated-credential create --id $spAppId --parameters "{ ... }"
-```
-
-#### 2. Service Connection Not Authorized
-**Error:** `The pipeline is not valid. Job <job>: Step <step> references service connection <name> which could not be found.`
-**Solution:**
-```powershell
-# Authorize service connection for all pipelines
-$scId = az devops service-endpoint list --query "[?name=='azure-foundry-dev'].id" --output tsv
-az devops service-endpoint update --id $scId --enable-for-all true
-```
-
-#### 3. Missing RBAC Permissions
-**Error:** Agent creates but pipeline shows errors accessing Azure AI
-**Solution:**
-```powershell
-# Add required roles
-az role assignment create --assignee $spAppId --role "Contributor" --scope /subscriptions/$subscriptionId/resourceGroups/$resourceGroup
-az role assignment create --assignee $spAppId --role "Cognitive Services User" --scope /subscriptions/$subscriptionId/resourceGroups/$resourceGroup
-```
-
-#### 4. Variable Group Field Restrictions
-**Error:** `Variable group name contains invalid characters`
-**Solution:** Use alphanumeric characters and hyphens only. Do NOT use underscores or spaces.
-
-#### 5. Pipeline YAML Path Not Found
-**Error:** `Could not find file at path`
-**Solution:**
-```powershell
-# Verify path in repository
-az repos show-branch --repository $repoName --name main
-
-# Ensure path starts with . (e.g., .azure-pipelines/pipeline.yml)
-```
-
-#### 6. Token Expired
-**Symptom:** Commands fail with 401 Unauthorized
-**Solution:**
-```powershell
-# Refresh bearer token (expires after 1 hour)
 $env:ADO_TOKEN = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query "accessToken" -o tsv
 $env:AZURE_DEVOPS_EXT_PAT = $env:ADO_TOKEN
 ```
 
-#### 7. Agent Not Visible in Portal
-**Symptom:** REST API shows no agents, but deployment succeeded
-**Solution:** Agent-framework SDK creates persistent agents - check Azure AI Foundry portal directly. Portal is authoritative source.
+**Complete Troubleshooting Guide**: [docs/troubleshooting.md](../../../docs/troubleshooting.md)
 
-### See Also
-- [docs/troubleshooting.md](../../../docs/troubleshooting.md) - Complete troubleshooting guide with all 12 lessons learned
+## Best Practices
 
-## Best practices
+### Execution Strategy
+- **Follow the phase order**: Always execute phases 1-6 in sequence
+- **One environment at a time**: Test dev thoroughly before test/prod
+- **Use modular skills**: Run individual skills for easier troubleshooting
+- **Validate early and often**: Use deployment-validation after each phase
 
-1. **Use the template configuration** - Starter template includes all validated settings
-2. **Follow the federated credential pattern** - Zero secrets, more secure
-3. **One environment at a time** - Create and test dev, then test, then prod
-4. **Verify RBAC before first run** - Contributor + Cognitive Services User roles required
-5. **Check variable group names** - Must match exactly what's in pipeline YAML
-6. **Document customizations** - Track any changes you make to the template
-7. **Use the feedback mechanism** - Report issues via template-app/FEEDBACK.md
+### Security
+- **Workload Identity Federation**: Zero secrets stored - use federated credentials
+- **RBAC principle**: Contributor + Cognitive Services User roles only (least privilege)
+- **Configuration management**: Store starter-config.json securely (add to .gitignore)
+- **Token management**: Refresh bearer token every 30-45 minutes
 
-## Integration with other skills
+### Configuration
+- **Use starter-config.json**: Centralized configuration for consistency
+- **Variable group naming**: Must match pipeline YAML exactly
+- **Federated credential format**: Must match Azure DevOps issuer/subject precisely
+- **Document customizations**: Track any template modifications
 
-This skill works together with:
-- **configuration-management** (required first) - Set up centralized configuration
-- **environment-validation** - Validate prerequisites before deployment
-- **resource-creation** - Create Azure resources including Service Principal
+### Deployment
+- **Skip first run**: Use `--skip-first-run` when creating pipelines for control
+- **Test incrementally**: Validate each phase before proceeding
+- **Monitor first execution**: Watch logs for the initial Create Agent pipeline run
+- **Use feedback mechanism**: Report issues via [template-app/FEEDBACK.md](../../../template-app/FEEDBACK.md)
 
-## Related resources
+## Related Skills
 
-- [docs/starter-guide.md](../../../docs/starter-guide.md) - Complete deployment guide
-- [docs/quick-start.md](../../../docs/quick-start.md) - Fast track guide
-- [docs/execution-guide.md](../../../docs/execution-guide.md) - GitHub Copilot usage
-- [docs/troubleshooting.md](../../../docs/troubleshooting.md) - All 12 critical lessons
-- [docs/az-devops-cli-reference.md](../../../docs/az-devops-cli-reference.md) - Azure DevOps CLI reference
-- [template-app/FEEDBACK.md](../../../template-app/FEEDBACK.md) - Submit feedback
+### Prerequisite Skills (Run Before This Orchestrator)
+- **[configuration-management](../configuration-management)** - Set up centralized configuration (REQUIRED FIRST)
+- **[resource-creation](../resource-creation)** - Create Azure resources and Service Principal (REQUIRED)
+- **[environment-validation](../environment-validation)** - Validate prerequisites (RECOMMENDED)
+
+### Orchestrated Skills (Called By This Orchestrator)
+- **[repository-setup](../repository-setup)** - Create repository and push template code
+- **[service-connection-setup](../service-connection-setup)** - Configure service connections with federated credentials
+- **[environment-setup](../environment-setup)** - Create variable groups and environments
+- **[pipeline-setup](../pipeline-setup)** - Create CI/CD pipelines
+- **[deployment-validation](../deployment-validation)** - Validate complete deployment
+
+## Documentation
+
+- **[docs/starter-guide.md](../../../docs/starter-guide.md)** - Complete deployment guide with screenshots
+- **[docs/quick-start.md](../../../docs/quick-start.md)** - Fast track deployment guide
+- **[docs/execution-guide.md](../../../docs/execution-guide.md)** - GitHub Copilot usage patterns
+- **[docs/troubleshooting.md](../../../docs/troubleshooting.md)** - All 12 critical lessons learned
+- **[docs/az-devops-cli-reference.md](../../../docs/az-devops-cli-reference.md)** - Azure DevOps CLI command reference
+- **[template-app/README.md](../../../template-app/README.md)** - Template application documentation
+- **[template-app/FEEDBACK.md](../../../template-app/FEEDBACK.md)** - Submit feedback and issues

@@ -95,34 +95,56 @@ Automatically checks for existing resources before creating new ones.
 
 ---
 
-### 🚀 migration-execution
-**When to use**: Executing the actual migration process
+### 🚀 starter-execution
+**When to use**: Deploying the Azure AI Foundry starter template
 
 Performs:
-- Repository backup and reorganization
-- Azure DevOps repository creation
-- Branch policy configuration
-- Service connection setup
+- Repository creation in Azure DevOps
+- Service connection setup with Workload Identity Federation
 - Variable group creation
+- Environment configuration
 - CI/CD pipeline deployment
-- Migration validation
+- Initial agent deployment
 
 **Usage**:
+```powershell
+# Follows step-by-step instructions from SKILL.md
+./.github/skills/starter-execution/
 ```
-@workspace Execute the Azure DevOps repository migration
+
+**Note**: Loads configuration for consistent naming and settings throughout deployment.
+
+[📖 Full Documentation](starter-execution/SKILL.md)
+
+---
+
+### 🔐 federated-credentials
+**When to use**: Fixing authentication issues, updating service connection credentials
+
+Manages:
+- Retrieving actual issuer/subject from Azure DevOps service connections
+- Deleting old federated credentials with incorrect format
+- Creating new credentials with correct values
+- Adding required RBAC permissions (Cognitive Services User)
+
+**Usage**:
+```powershell
+# Fix all federated credentials
+./.github/skills/federated-credentials/fix-federated-credentials.ps1
+
+# Fix specific environments
+./.github/skills/federated-credentials/fix-federated-credentials.ps1 -Environments @("dev", "test")
 ```
 
-**Note**: Loads configuration for consistent naming and settings throughout the migration process.
+**Critical**: Never guess issuer/subject format. Always retrieve from Azure DevOps REST API.
 
-Includes rollback procedures for safe operation.
-
-[📖 Full Documentation](migration-execution/SKILL.md)
+[📖 Full Documentation](federated-credentials/SKILL.md)
 
 ---
 
 ## Workflow Order
 
-**IMPORTANT**: Always follow this order for successful migration:
+**IMPORTANT**: Always follow this order for successful deployment:
 
 ```
 1. configuration-management    → Set up centralized configuration
@@ -131,9 +153,11 @@ Includes rollback procedures for safe operation.
    ↓
 3. resource-creation          → Create Azure resources using config
    ↓
-4. migration-execution        → Execute migration using config
+4. starter-execution          → Deploy template application using config
    ↓
-5. environment-validation     → Validate success
+5. federated-credentials      → Fix authentication credentials (if needed)
+   ↓
+6. environment-validation     → Validate success
 ```
 
 ### Progressive Disclosure

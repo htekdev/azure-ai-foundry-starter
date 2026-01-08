@@ -1,414 +1,292 @@
 ---
 name: resource-creation
-description: Creates and configures Azure resources required for the Azure AI Foundry starter deployment including Service Principals, AI Foundry projects, and proper RBAC configuration. Use this when setting up Azure infrastructure, creating missing resources, or configuring resource permissions for deployment.
+description: Orchestrates creation of all Azure resources for Azure AI Foundry multi-environment deployment. Coordinates resource-groups, service-principal, and ai-foundry-resources skills. Use when setting up a complete Azure AI Foundry infrastructure from scratch across dev, test, and prod environments.
+license: Apache-2.0
 ---
 
-# Azure Resource Creation for Azure AI Foundry Starter
+# Azure AI Foundry Resource Creation Orchestrator
 
-This skill automates the creation of Azure resources required for the Azure AI Foundry starter template deployment. It checks for resource existence before creating and ensures proper configuration.
+This skill orchestrates the creation of all Azure resources required for Azure AI Foundry deployments across multiple environments.
 
-## When to use this skill
+## Overview
+
+A high-level orchestration skill that coordinates three specialized skills to create a complete Azure AI Foundry infrastructure:
+
+1. **[resource-groups](../resource-groups)** - Creates Azure resource groups for multiple environments
+2. **[service-principal](../service-principal)** - Creates Service Principal with workload identity federation and RBAC
+3. **[ai-foundry-resources](../ai-foundry-resources)** - Creates AI Services resources and AI Foundry Projects
+
+## When to Use This Skill
 
 Use this skill when you need to:
-- Create Azure resources required for AI agent deployment
-- Set up Service Principals with proper RBAC permissions (Contributor + Cognitive Services User)
-- Create Azure AI Foundry projects
-- Configure resource access and permissions
-- Verify resource configuration before deployment
+- Set up complete Azure AI Foundry infrastructure from scratch
+- Create multi-environment deployments (dev, test, prod)
+- Orchestrate resource creation in proper dependency order
+- Ensure consistent resource naming and tagging
+- Configure RBAC and workload identity federation
 
-## Resources managed by this skill
+## Orchestration Flow
 
-### 1. Service Principal
-- Creates Service Principal for workload identity federation
-- Assigns Contributor role to resource group
-- Assigns Cognitive Services User role (required for AI Foundry)
-- Configures federated credentials for Azure DevOps
+When `-CreateAll` is specified, the orchestrator executes in this order:
 
-### 2. Azure AI Foundry Project
-- Creates or validates AI Foundry project
-- Configures project endpoints for dev/test/prod
-- Sets up project permissions
-- Enables agent deployment capabilities
+### 1. Resource Groups (Always)
+Calls [resource-groups/scripts/create-resource-groups.ps1](../resource-groups/scripts/create-resource-groups.ps1)
+- Creates dev, test, prod resource groups
+- Applies environment-specific tags
+- Validates resource group creation
 
-### 3. Supporting Resources
-- Resource groups
-- Role assignments (RBAC)
-- Federated identity credentials
+### 2. Service Principal (Conditional: `-CreateServicePrincipal`)
+Calls [service-principal/scripts/create-service-principal.ps1](../service-principal/scripts/create-service-principal.ps1)
+- Creates App Registration with workload identity federation
+- Grants Contributor role on all resource groups
+- Grants Cognitive Services User role
+- Updates starter-config.json with credentials
 
-**Note**: This is a starter template - AI Foundry projects should typically be created through the Azure portal first, then referenced in configuration.
+### 3. AI Foundry Resources (Conditional: `-CreateAIProjects`)
+Calls [ai-foundry-resources/scripts/create-ai-foundry-resources.ps1](../ai-foundry-resources/scripts/create-ai-foundry-resources.ps1)
+- Creates AI Services resources for each environment
+- Creates AI Foundry Projects
+- Configures project endpoints
+- Grants Cognitive Services User role to Service Principal
 
-## Resource creation process
-
-**💡 Recommended**: Use configuration management for consistent naming:
+## Usage
 
 ```powershell
-# Load configuration functions
-. ./.github/skills/configuration-management/config-functions.ps1
+# Create all resources using configuration from starter-config.json
+./create-resources.ps1 -UseConfig -CreateAll
 
-# Get configuration
-$config = Get-MigrationConfig
+# Create specific resources
+./create-resources.ps1 -UseConfig -CreateServicePrincipal -CreateAIProjects
 
-# Extract Azure resource names
-$rgName = $config.azure.resourceGroupName
-$location = $config.azure.location
-$spName = $config.servicePrincipal.name
-$mlWorkspace = $config.azure.mlWorkspaceName
-$openAIService = $config.azure.openAIServiceName
+# Create for specific environment
+./create-resources.ps1 `
+    -ResourceGroupBaseName "rg-aif-demo" `
+    -Location "eastus" `
+    -Environment "dev" `
+    -CreateAll
+
+# Create without Service Principal
+./create-resources.ps1 -UseConfig -Environment "all" -CreateAIProjects
 ```
 
-### Step 1: Check existing resources
+## Parameters
 
-Before creating any resources, verify what already exists:
+### Configuration
+- **`-UseConfig`**: Load resource names from starter-config.json
+
+### Resource Naming
+- **`-ResourceGroupBaseName`**: Base name for resource groups (e.g., "rg-aif-demo")
+- **`-Location`**: Azure region (default: eastus)
+- **`-ServicePrincipalName`**: Service Principal display name
+- **`-AIProjectBaseName`**: Base name for AI resources
+
+### Environment Selection
+- **`-Environment`**: Target environment ('dev', 'test', 'prod', or 'all')
+
+### Creation Flags
+- **`-CreateServicePrincipal`**: Create Service Principal and configure RBAC
+- **`-CreateAIProjects`**: Create AI Services and AI Foundry Projects
+- **`-CreateAll`**: Enable both ServicePrincipal and AIProjects creation
+
+### Output
+- **`-OutputFormat`**: Output format ('text' or 'json')
+
+## Examples
+
+### Complete Setup (All Resources, All Environments)
+```powershell
+cd .github/skills/resource-creation
+./create-resources.ps1 -UseConfig -CreateAll
+```
+
+### Dev Environment Only
+```powershell
+./create-resources.ps1 -UseConfig -Environment "dev" -CreateAll
+```
+
+### AI Resources Only (Skip Service Principal)
+```powershell
+./create-resources.ps1 `
+    -ResourceGroupBaseName "rg-aif-demo" `
+    -AIProjectBaseName "aif-demo" `
+    -Location "eastus" `
+    -Environment "all" `
+    -CreateAIProjects
+```
+
+### Custom Naming with Service Principal
+```powershell
+./create-resources.ps1 `
+    -ResourceGroupBaseName "rg-myapp-ai" `
+    -ServicePrincipalName "sp-myapp-cicd" `
+    -AIProjectBaseName "aif-myapp" `
+    -Location "westus2" `
+    -Environment "all" `
+    -CreateAll
+```
+
+## Verification
+
+After orchestration completes, verify the deployment:
 
 ```powershell
-# Load configuration
-. ./.github/skills/configuration-management/config-functions.ps1
-$config = Get-MigrationConfig
+# Check Resource Groups
+az group list --query "[?starts_with(name, 'rg-aif-demo')].{Name:name, Location:location}" -o table
 
 # Check Service Principal
-az ad sp list --display-name $config.servicePrincipal.name --query "[].{Name:displayName, AppId:appId}" -o table
+az ad sp list --display-name "sp-aif-demo-cicd" --query "[].{Name:displayName, AppId:appId}" -o table
 
-# Check resource group
-az group show --name $config.azure.resourceGroupName
+# Check AI Services
+az cognitiveservices account list --query "[?starts_with(name, 'aif-demo')].{Name:name, Kind:kind, Location:location}" -o table
 
-# Check ML workspace
-az ml workspace show --resource-group $config.azure.resourceGroupName --workspace-name $config.azure.mlWorkspaceName
-
-# Check OpenAI service
-az cognitiveservices account show --resource-group $config.azure.resourceGroupName --name $config.azure.openAIServiceName
+# Check RBAC Assignments
+$spId = az ad sp list --display-name "sp-aif-demo-cicd" --query "[0].id" -o tsv
+az role assignment list --assignee $spId --query "[].{Role:roleDefinitionName, Scope:scope}" -o table
 ```
 
-### Step 2: Create missing resources
+## Configuration File
 
-Use the resource creation script with configuration:
+The orchestrator updates **starter-config.json** with created resource information:
 
-```powershell
-# Load configuration
-. ./.github/skills/configuration-management/config-functions.ps1
-$config = Get-MigrationConfig
-
-# Create resources using configuration values
-cd .github/skills/resource-creation
-./create-resources.ps1 `
-  -ResourceGroupName $config.azure.resourceGroupName `
-  -Location $config.azure.location `
-  -ServicePrincipalName $config.servicePrincipal.name `
-  -MLWorkspaceName $config.azure.mlWorkspaceName `
-  -OpenAIServiceName $config.azure.openAIServiceName `
-  -CreateServicePrincipal $true `
-  -CreateMLWorkspace $true `
-  -CreateOpenAI $true
-```
-
-### Step 3: Verify resource creation
-
-After creation, verify all resources are properly configured:
-
-```powershell
-# Verify Service Principal
-az ad sp show --id $(az ad sp list --display-name "migration-sp" --query "[0].appId" -o tsv)
-
-# Verify RBAC assignment
-az role assignment list --scope "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/northwind-ml-rg" --query "[?principalType=='ServicePrincipal'].{Principal:principalName, Role:roleDefinitionName}" -o table
-
-# Verify ML workspace
-az ml workspace show --resource-group "northwind-ml-rg" --workspace-name "northwind-ml-workspace" --query "{Name:name, Location:location, State:provisioningState}" -o table
-
-# Verify OpenAI deployments
-az cognitiveservices account deployment list --resource-group "northwind-ml-rg" --name "northwind-openai" -o table
-```
-
-### Step 4: Save credentials securely
-
-Store Service Principal credentials in Azure Key Vault or secure location:
-
-```powershell
-# Get Service Principal credentials
-$spCredentials = az ad sp create-for-rbac --name "migration-sp" --role Contributor --scopes "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/northwind-ml-rg" | ConvertFrom-Json
-
-# Store in Key Vault (recommended)
-az keyvault secret set --vault-name "northwind-keyvault" --name "migration-sp-appid" --value $spCredentials.appId
-az keyvault secret set --vault-name "northwind-keyvault" --name "migration-sp-password" --value $spCredentials.password
-az keyvault secret set --vault-name "northwind-keyvault" --name "migration-sp-tenant" --value $spCredentials.tenant
-
-# Or save to secure file (for testing only)
-$spCredentials | ConvertTo-Json | Out-File -FilePath "sp-credentials.json" -Encoding UTF8
-Write-Host "⚠️ WARNING: Store sp-credentials.json securely and delete after use!"
-```
-
-## Service Principal creation
-
-### Create with Contributor role
-
-```powershell
-# Create Service Principal with Contributor role on resource group
-az ad sp create-for-rbac `
-  --name "migration-sp" `
-  --role "Contributor" `
-  --scopes "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/northwind-ml-rg" `
-  --query "{appId:appId, password:password, tenant:tenant}" `
-  -o json
-```
-
-### Assign additional roles if needed
-
-```powershell
-# Get Service Principal object ID
-$spObjectId = az ad sp list --display-name "migration-sp" --query "[0].id" -o tsv
-
-# Assign Machine Learning Workspace Contributor role
-az role assignment create `
-  --assignee $spObjectId `
-  --role "AzureML Workspace Contributor" `
-  --scope "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/northwind-ml-rg"
-
-# Assign Cognitive Services Contributor role
-az role assignment create `
-  --assignee $spObjectId `
-  --role "Cognitive Services Contributor" `
-  --scope "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/northwind-ml-rg"
-```
-
-## ML Workspace creation
-
-### Create workspace with all dependencies
-
-```powershell
-# Create ML workspace (automatically creates storage, key vault, app insights)
-az ml workspace create `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-ml-workspace" `
-  --location "eastus" `
-  --description "ML workspace for repository migration" `
-  --public-network-access Enabled `
-  --query "{Name:name, Location:location, State:provisioningState}" `
-  -o table
-
-# Wait for workspace to be ready
-az ml workspace show `
-  --resource-group "northwind-ml-rg" `
-  --workspace-name "northwind-ml-workspace" `
-  --query "provisioningState" `
-  -o tsv
-```
-
-### Configure workspace features
-
-```powershell
-# Enable features if needed
-az ml workspace update `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-ml-workspace" `
-  --public-network-access Enabled `
-  --allow-public-access-when-behind-vnet true
-```
-
-## OpenAI Service creation
-
-### Create OpenAI service
-
-```powershell
-# Create Cognitive Services account for OpenAI
-az cognitiveservices account create `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-openai" `
-  --location "eastus" `
-  --kind "OpenAI" `
-  --sku "S0" `
-  --custom-domain "northwind-openai" `
-  --query "{Name:name, Location:location, State:properties.provisioningState}" `
-  -o table
-
-# Wait for deployment to complete
-Start-Sleep -Seconds 30
-```
-
-### Deploy OpenAI models
-
-```powershell
-# Deploy GPT-4 model
-az cognitiveservices account deployment create `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-openai" `
-  --deployment-name "gpt-4" `
-  --model-name "gpt-4" `
-  --model-version "turbo-2024-04-09" `
-  --model-format "OpenAI" `
-  --sku-capacity 10 `
-  --sku-name "Standard"
-
-# Deploy GPT-3.5-turbo model
-az cognitiveservices account deployment create `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-openai" `
-  --deployment-name "gpt-35-turbo" `
-  --model-name "gpt-35-turbo" `
-  --model-version "0125" `
-  --model-format "OpenAI" `
-  --sku-capacity 10 `
-  --sku-name "Standard"
-
-# Verify deployments
-az cognitiveservices account deployment list `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-openai" `
-  --query "[].{Name:name, Model:properties.model.name, State:properties.provisioningState}" `
-  -o table
-```
-
-### Get OpenAI endpoint and keys
-
-```powershell
-# Get endpoint
-az cognitiveservices account show `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-openai" `
-  --query "properties.endpoint" `
-  -o tsv
-
-# Get API keys
-az cognitiveservices account keys list `
-  --resource-group "northwind-ml-rg" `
-  --name "northwind-openai" `
-  --query "{Key1:key1, Key2:key2}" `
-  -o json
-```
-
-## Resource Group creation
-
-### Create resource group if it doesn't exist
-
-```powershell
-# Check if resource group exists
-$rgExists = az group exists --name "northwind-ml-rg"
-
-if ($rgExists -eq "false") {
-    # Create resource group
-    az group create `
-      --name "northwind-ml-rg" `
-      --location "eastus" `
-      --tags "Environment=Production" "Project=Migration" `
-      --query "{Name:name, Location:location, State:properties.provisioningState}" `
-      -o table
-    
-    Write-Host "✅ Resource group created successfully"
-} else {
-    Write-Host "✅ Resource group already exists"
+```json
+{
+  "azure": {
+    "subscriptionId": "00000000-0000-0000-0000-000000000000",
+    "resourceGroups": {
+      "dev": "rg-aif-demo-dev",
+      "test": "rg-aif-demo-test",
+      "prod": "rg-aif-demo-prod"
+    },
+    "location": "eastus"
+  },
+  "servicePrincipal": {
+    "displayName": "sp-aif-demo-cicd",
+    "appId": "00000000-0000-0000-0000-000000000000",
+    "objectId": "00000000-0000-0000-0000-000000000000",
+    "tenantId": "00000000-0000-0000-0000-000000000000"
+  },
+  "aiFoundry": {
+    "dev": {
+      "projectName": "aif-demo-dev",
+      "projectEndpoint": "https://..."
+    },
+    "test": { ... },
+    "prod": { ... }
+  }
 }
+```
+
+## Specialized Skills
+
+This orchestrator delegates to three specialized skills:
+
+### 1. Resource Groups Skill
+**Location**: [../resource-groups](../resource-groups)  
+**Purpose**: Creates Azure resource groups for multiple environments  
+**Output**: Resource group names and IDs
+
+**Direct Usage**:
+```powershell
+cd ../resource-groups/scripts
+./create-resource-groups.ps1 `
+    -ResourceGroupBaseName "rg-aif-demo" `
+    -Location "eastus" `
+    -Environment "all"
+```
+
+### 2. Service Principal Skill
+**Location**: [../service-principal](../service-principal)  
+**Purpose**: Creates Service Principal with workload identity and RBAC  
+**Output**: Service Principal credentials and configuration
+
+**Direct Usage**:
+```powershell
+cd ../service-principal/scripts
+./create-service-principal.ps1 `
+    -DisplayName "sp-aif-demo-cicd" `
+    -ResourceGroupNames @("rg-aif-demo-dev", "rg-aif-demo-test", "rg-aif-demo-prod")
+```
+
+### 3. AI Foundry Resources Skill
+**Location**: [../ai-foundry-resources](../ai-foundry-resources)  
+**Purpose**: Creates AI Services and AI Foundry Projects  
+**Output**: Project names and endpoints
+
+**Direct Usage**:
+```powershell
+cd ../ai-foundry-resources/scripts
+./create-ai-foundry-resources.ps1 `
+    -ProjectBaseName "aif-demo" `
+    -ResourceGroupName "rg-aif-demo-dev" `
+    -Location "eastus" `
+    -Environment "dev" `
+    -ServicePrincipalId "00000000-0000-0000-0000-000000000000"
 ```
 
 ## Troubleshooting
 
-### Service Principal creation fails
-```powershell
-# Check if SP already exists
-az ad sp list --display-name "migration-sp" --query "[].{Name:displayName, AppId:appId}" -o table
+### Orchestration Errors
 
-# If exists, delete and recreate
-$appId = az ad sp list --display-name "migration-sp" --query "[0].appId" -o tsv
-if ($appId) {
-    az ad sp delete --id $appId
-    Write-Host "Deleted existing Service Principal"
-}
+**Symptom**: "Cannot find script file"
+```powershell
+# Verify skill structure
+Get-ChildItem -Path .github/skills -Recurse -Filter "*.ps1"
+
+# Ensure scripts are in correct locations:
+# ../resource-groups/scripts/create-resource-groups.ps1
+# ../service-principal/scripts/create-service-principal.ps1
+# ../ai-foundry-resources/scripts/create-ai-foundry-resources.ps1
 ```
 
-### ML Workspace creation fails
+**Symptom**: "Resource group does not exist"
 ```powershell
-# Check quota limits
-az ml quota list --resource-group "northwind-ml-rg" --location "eastus"
-
-# Check if name is available
-az ml workspace show --resource-group "northwind-ml-rg" --workspace-name "northwind-ml-workspace" 2>&1
-
-# Try different location if region doesn't support ML
-az account list-locations --query "[?metadata.regionType=='Physical'].{Name:name, DisplayName:displayName}" -o table
+# Run resource-groups skill first
+cd .github/skills/resource-groups/scripts
+./create-resource-groups.ps1 -UseConfig
 ```
 
-### OpenAI Service creation fails
+**Symptom**: "Service Principal not found"
 ```powershell
-# Check OpenAI availability in region
-az cognitiveservices account list-kinds --query "[?kind=='OpenAI']" -o table
+# Verify Service Principal was created
+az ad sp list --display-name "sp-aif-demo-cicd" -o table
 
-# Check if name is available
-az cognitiveservices account check-name-availability --name "northwind-openai" --type "Microsoft.CognitiveServices/accounts"
-
-# List available SKUs
-az cognitiveservices account list-skus --kind OpenAI --location "eastus" -o table
+# If missing, run service-principal skill
+cd .github/skills/service-principal/scripts
+./create-service-principal.ps1 -UseConfig
 ```
 
-### Deployment quota exceeded
-```powershell
-# Check current deployments
-az cognitiveservices account deployment list --resource-group "northwind-ml-rg" --name "northwind-openai" -o table
+### Skill-Specific Issues
 
-# Delete unused deployments
-az cognitiveservices account deployment delete --resource-group "northwind-ml-rg" --name "northwind-openai" --deployment-name "old-model"
+For detailed troubleshooting of individual skills, see:
+- [Resource Groups Troubleshooting](../resource-groups/SKILL.md#troubleshooting)
+- [Service Principal Troubleshooting](../service-principal/SKILL.md#troubleshooting)
+- [AI Foundry Resources Troubleshooting](../ai-foundry-resources/SKILL.md#troubleshooting)
 
-# Request quota increase through Azure Portal
-Write-Host "If quota exceeded, request increase at: https://portal.azure.com/#view/Microsoft_Azure_Support/HelpAndSupportBlade"
-```
+## Best Practices
 
-## Best practices
+### Execution Order
+Always create resources in this order:
+1. Resource Groups (required for all other resources)
+2. Service Principal (optional, but recommended for CI/CD)
+3. AI Foundry Resources (requires resource groups)
+
+### Configuration Management
+- Use **starter-config.json** for consistent naming across all skills
+- Run with `-UseConfig` flag for automated deployments
+- Review configuration before creating production resources
+
+### Environment Strategy
+- Start with **dev** environment for testing
+- Validate resource creation and access
+- Promote to **test** and **prod** incrementally
 
 ### Security
-- Store Service Principal credentials in Azure Key Vault
-- Use managed identities when possible
-- Rotate credentials regularly
-- Apply least privilege access principle
-- Enable diagnostic logging on all resources
+- Service Principal credentials are automatically saved to **starter-config.json**
+- Store **starter-config.json** securely (add to .gitignore)
+- Use Azure Key Vault for production credential storage
+- Rotate Service Principal secrets regularly
 
-### Naming conventions
-- Use consistent naming: `{project}-{resource-type}-{env}`
-- Examples: `northwind-ml-workspace`, `northwind-openai`
-- Include environment tags: `Production`, `Development`, `Test`
-
-### Cost management
-- Use appropriate SKUs (S0 for production, F0 for dev/test)
-- Set quota limits on OpenAI deployments
-- Enable auto-shutdown for ML compute when not in use
-- Monitor resource usage with Azure Cost Management
-
-### Resource organization
-- Group related resources in same resource group
-- Use consistent locations/regions
-- Apply tags for cost tracking and management
-- Document resource dependencies
-
-## Integration with migration workflow
-
-This skill should be used early in the migration process:
-
-1. **Before migration**: Create all required resources
-2. **During setup**: Configure Service Principal and RBAC
-3. **Before execution**: Verify all resources are accessible
-4. **After migration**: Validate resource configurations
-
-## Automation examples
-
-### Create all resources in one command
-```powershell
-./create-resources.ps1 `
-  -ResourceGroupName "northwind-ml-rg" `
-  -Location "eastus" `
-  -ServicePrincipalName "migration-sp" `
-  -MLWorkspaceName "northwind-ml-workspace" `
-  -OpenAIServiceName "northwind-openai" `
-  -CreateAll $true `
-  -OutputFormat json
-```
-
-### Create only missing resources
-```powershell
-./create-resources.ps1 `
-  -ResourceGroupName "northwind-ml-rg" `
-  -CheckExisting $true `
-  -SkipIfExists $true
-```
-
-## Related resources
-
-- [COPILOT_EXECUTION_GUIDE.md](../../../COPILOT_EXECUTION_GUIDE.md) - Complete migration process
-- [environment-validation/SKILL.md](../environment-validation/SKILL.md) - Environment validation skill
-- [create-resources.ps1](./create-resources.ps1) - Resource creation script
-- [Azure ML CLI Reference](https://learn.microsoft.com/en-us/cli/azure/ml)
-- [Azure OpenAI Service Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
+### Cost Optimization
+- Use `-Environment "dev"` for initial testing (creates only one environment)
+- Delete dev resources when not in use
+- Monitor costs with Azure Cost Management tags applied by skills
