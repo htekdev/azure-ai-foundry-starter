@@ -90,7 +90,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Deploy Agent in Dev'
                   inputs:
-                    azureSubscription: 'azure-foundry-dev'
+                    azureSubscription: 'Azure-dev'
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -150,7 +150,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Deploy Agent in Test'
                   inputs:
-                    azureSubscription: 'azure-foundry-test'
+                    azureSubscription: 'Azure-test'
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -210,7 +210,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Deploy Agent in Production'
                   inputs:
-                    azureSubscription: 'azure-foundry-prod'
+                    azureSubscription: 'Azure-prod'
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
