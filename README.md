@@ -212,8 +212,7 @@ Includes agent evaluation, red teaming, and security best practices built into t
 │       └── deployment-validation/
 ├── .azure-pipelines/    # Azure DevOps pipeline YAML
 │   ├── createagentpipeline.yml
-│   ├── agenteval.yml
-│   └── redteam.yml
+│   └── agentconsumptionpipeline.yml
 ├── src/                 # AI agent application code
 │   ├── agents/          # Agent implementations
 │   ├── evaluation/      # Evaluation logic
@@ -269,13 +268,13 @@ az pipelines runs list --top 5
 
 ## 🤝 Contributing
 
-Contributions welcome! See [FEEDBACK.md](FEEDBACK.md) for ways to provide feedback and contribute.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [FEEDBACK.md](FEEDBACK.md) for ways to provide feedback.
 
 ---
 
 ## 📄 License
 
-This project is provided as a starter template. Customize and use it according to your organization's policies.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. Customize and use it according to your organization's policies.
 
 ---
 

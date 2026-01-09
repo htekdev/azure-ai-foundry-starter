@@ -59,7 +59,7 @@ After 22 pipeline iterations of refinement:
 ## 💡 Feedback
 
 Help us improve this template:
-- [Submit feedback](../template-app/FEEDBACK.md)
+- [Submit feedback](../FEEDBACK.md)
 - [Report issues](../../issues)
 - [Request features](../../issues/new)
 
@@ -70,7 +70,7 @@ Contributions welcome! See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 ---
 
 **Quick Links:**
-- [Template App](../template-app/) - Ready-to-deploy application
+- [Application Source](../src/) - AI agent application code
 - [Agent Skills](../.github/skills/) - GitHub Copilot integration
 - [Archive](../archive/) - v1 migration files
 

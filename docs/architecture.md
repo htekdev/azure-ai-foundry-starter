@@ -8,18 +8,15 @@ The Azure AI Foundry Starter Template provides a complete, production-ready appl
 
 ```
 azure-ai-foundry-starter/
-├── template-app/           # Complete AI agent application
-│   ├── .azure-pipelines/   # Multi-stage CI/CD pipelines
-│   ├── src/                # Application source code
-│   │   ├── agents/         # Agent creation and management
-│   │   ├── evaluation/     # Agent evaluation scripts
-│   │   ├── security/       # Security and compliance
-│   │   └── utils/          # Utility functions
-│   ├── tests/              # Unit and integration tests
-│   ├── requirements.txt    # Python dependencies
-│   ├── sample.env          # Environment configuration template
-│   ├── README.md           # Template application documentation
-│   └── FEEDBACK.md         # User feedback mechanism
+├── .azure-pipelines/       # Multi-stage CI/CD pipelines
+├── src/                    # Application source code
+│   ├── agents/             # Agent creation and management
+│   ├── evaluation/         # Agent evaluation scripts
+│   ├── security/           # Security and compliance
+│   └── utils/              # Utility functions
+├── scripts/                # Deployment and setup scripts
+├── requirements.txt        # Python dependencies
+├── sample.env              # Environment configuration template
 │
 ├── docs/                   # Complete documentation
 │   ├── README.md           # Documentation index
@@ -44,13 +41,16 @@ azure-ai-foundry-starter/
 │   ├── CHANGELOG.md        # v1 → v2 changes
 │   └── v1-migration/       # Original migration scripts
 │
+├── CONTRIBUTING.md         # Contribution guidelines
+├── LICENSE                 # MIT License
 ├── README.md               # Repository overview
+├── SETUP_GUIDE.md          # Complete setup instructions
 └── starter-config.json     # Configuration template
 ```
 
 ## Application Architecture
 
-### AI Agent Application (`template-app/`)
+### AI Agent Application
 
 **Purpose**: Production-ready Python application for Azure AI Foundry agent deployment.
 
@@ -264,7 +264,7 @@ Complete working deployment
 ### Customizing the Template
 
 **Add New Agent Type**:
-1. Create new file in `template-app/src/agents/`
+1. Create new file in `src/agents/`
 2. Follow `createagent.py` pattern
 3. Add pipeline stage or new pipeline YAML
 4. Update variable groups with required values
@@ -303,7 +303,7 @@ After understanding architecture:
 1. Read [docs/quick-start.md](quick-start.md) to deploy
 2. Review [docs/deployment-guide.md](deployment-guide.md) for details
 3. Check [docs/troubleshooting.md](troubleshooting.md) for known issues
-4. Customize `template-app/` for your use case
+4. Customize `src/` for your use case
 
 ---
 
