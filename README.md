@@ -1,133 +1,313 @@
-# Azure AI Foundry Starter Template
+# Azure AI Foundry Starter
 
-## 🎯 Overview
+> **Production-ready template for deploying AI agents to Azure AI Foundry with automated CI/CD pipelines through Azure DevOps**
 
-**Fork, customize, and deploy your Azure AI Foundry agent in under an hour!**
+## 🎯 What is This?
 
-This is a complete, production-ready starter template for deploying AI agents to Azure AI Foundry with automated CI/CD through Azure DevOps. Everything you need is included - no external cloning required.
+This starter template provides everything you need to deploy AI agents to **Azure AI Foundry** with full **Azure DevOps CI/CD automation**. It includes:
 
-**✨ What's Included**:
-- Complete AI agent application (`template-app/`)
-- Multi-stage CI/CD pipeline (DEV/TEST/PROD)
-- Workload Identity Federation (zero secrets!)
-- Comprehensive documentation
-- GitHub Copilot integration
-- All lessons learned from 22 pipeline iterations
+- ✅ **Complete AI agent application** ready to deploy
+- ✅ **Multi-environment pipelines** (DEV → TEST → PROD)
+- ✅ **Zero-secrets architecture** using Workload Identity Federation
+- ✅ **Automated infrastructure** with Azure CLI scripts
+- ✅ **Comprehensive documentation** and troubleshooting guides
+- ✅ **GitHub Copilot agent integration** for guided setup
 
-## 🚀 Quick Start
+Deploy your first AI agent in **under 30 minutes** with automated resource provisioning, service principal setup, and CI/CD pipeline configuration.
 
-**New to Azure AI Foundry?** Get started in 3 steps:
+---
 
-1. **Configure your deployment**:
-   ```powershell
-   ./.github/skills/configuration-management/configure-starter.ps1 -Interactive
-   ```
+## 🚀 Getting Started
 
-2. **Deploy the template**:
-   ```powershell
-   ./.github/skills/starter-execution/SKILL.md  # Follow step-by-step guide
-   ```
+Choose your preferred setup method:
 
-3. **Customize and iterate**:
-   - Modify `template-app/src/agents/createagent.py`
-   - Push changes and pipeline auto-deploys
+### Option 1: Automated Setup Script (Recommended)
 
-**Full guide**: [docs/quick-start.md](docs/quick-start.md)
+Run the automated setup script with your deployment details:
+
+```powershell
+.\scripts\setup.ps1 `
+    -ProjectName "foundrycicd" `
+    -ADOProjectName "foundrycicd" `
+    -OrganizationUrl "https://dev.azure.com/your-org" `
+    -TenantId "YOUR_TENANT_ID" `
+    -SubscriptionId "YOUR_SUBSCRIPTION_ID"
+```
+
+**Parameters:**
+- **ProjectName**: Azure resource naming prefix (e.g., `foundrycicd` creates `rg-foundrycicd-dev`, `sp-foundrycicd-cicd`, `foundrycicd-dev-aiservices`)
+  - Must be lowercase, alphanumeric, and hyphens only (8-15 characters recommended)
+- **ADOProjectName**: Azure DevOps project name (can be same as ProjectName or different)
+  - If omitted, defaults to ProjectName value
+- **OrganizationUrl**: Your Azure DevOps organization URL
+- **TenantId**: Azure Active Directory tenant ID
+- **SubscriptionId**: Azure subscription ID
+
+**What it does:**
+- Creates all Azure resources (resource groups, service principal, AI Foundry projects)
+- Sets up Azure DevOps project, service connections, variable groups, environments, and pipelines
+- Configures Workload Identity Federation (no secrets!)
+- Validates the complete deployment
+
+**Time:** ~10-15 minutes
+
+---
+
+### Option 2: GitHub Copilot Custom Agent (Interactive)
+
+Ask the Azure AI Foundry Deployment Agent for help:
+
+```
+@workspace I want to deploy the Azure AI Foundry starter
+```
+
+The agent will:
+- Guide you through each step interactively
+- Explain what's happening at each phase
+- Help troubleshoot any issues
+- Validate your deployment
+
+**Perfect for:** Learning the process, understanding the architecture, customizing the setup
+
+---
+
+### Option 3: Manual Setup Guide (Step-by-Step)
+
+Follow the comprehensive setup guide with detailed explanations:
+
+📖 **[SETUP_GUIDE.md](SETUP_GUIDE.md)**
+
+**Includes:**
+- Prerequisites checklist
+- Phase-by-phase instructions (Configuration → Azure Resources → Azure DevOps → Validation)
+- Both automated scripts and manual portal steps
+- Troubleshooting for common issues
+- Verification commands at each step
+
+**Perfect for:** Understanding every detail, manual control, learning Azure DevOps
+
+---
+
+## 📋 Prerequisites
+
+Before starting, ensure you have:
+
+### Required Tools
+- **Azure CLI** (2.50+) - [Install](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- **PowerShell** (7.0+) - [Install](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+- **Git** (2.30+) - [Install](https://git-scm.com/downloads)
+- **Azure DevOps CLI extension** - Install: `az extension add --name azure-devops`
+
+### Required Permissions
+- **Azure Subscription**: Contributor role + ability to create service principals
+- **Azure DevOps**: Project Administrator role
+
+### Information You'll Need
+- **ProjectName** (e.g., `foundrycicd`) - Azure resource naming prefix
+  - Used to name Azure resources: `rg-foundrycicd-dev`, `sp-foundrycicd-cicd`, etc.
+  - Must be lowercase, alphanumeric, and hyphens only
+  - Recommended: 8-15 characters
+  - Examples: `foundrycicd`, `myai-project`, `ai-demo-01`
+- **ADOProjectName** (optional) - Azure DevOps project name
+  - Can be same as ProjectName or different (e.g., more descriptive name)
+  - If omitted, defaults to ProjectName value
+- **Azure subscription ID** - Found in Azure Portal → Subscriptions
+- **Azure tenant ID** - Found in Azure Portal → Azure Active Directory → Properties
+- **Azure DevOps organization URL** - Your organization URL (e.g., `https://dev.azure.com/your-org`)
+
+**Quick verification:**
+```powershell
+az --version          # Check Azure CLI
+az login              # Login to Azure
+az account show       # Verify subscription
+```
+
+---
+
+## 💡 What Gets Created
+
+The `ProjectName` parameter is used for Azure resource naming (as prefix), and `ADOProjectName` (or ProjectName if not specified) is used for the Azure DevOps project name.
+
+For example, with `ProjectName="foundrycicd"` and `ADOProjectName="foundrycicd"`:
+
+### Azure Resources
+(Named using ProjectName as **prefix**)
+- **3 Resource Groups**:
+  - `rg-foundrycicd-dev`
+  - `rg-foundrycicd-test`
+  - `rg-foundrycicd-prod`
+- **Service Principal**: `sp-foundrycicd-cicd` with Workload Identity Federation
+- **AI Services** resources (kind: AIServices):
+  - `foundrycicd-dev-aiservices`
+  - `foundrycicd-test-aiservices`
+  - `foundrycicd-prod-aiservices`
+- **AI Foundry Projects** for each environment
+- **RBAC role assignments** (Contributor, Cognitive Services User)
+
+### Azure DevOps Resources
+(Named using ProjectName as **base name**)
+- **Azure DevOps Project**: `foundrycicd` (exact ProjectName value)
+- **3 Service Connections** with federated credentials:
+  - `foundrycicd-dev`
+  - `foundrycicd-test`
+  - `foundrycicd-prod`
+- **3 Variable Groups**: `foundrycicd-dev-vars`, `foundrycicd-test-vars`, `foundrycicd-prod-vars`
+- **3 Environments**: `dev`, `test`, `production` (with approval gates)
+- **CI/CD Pipelines** for agent deployment, testing, and security
+
+---
+
+## ✨ Key Features
+
+### 🔐 Zero-Secrets Architecture
+Uses **Workload Identity Federation** for authentication between Azure DevOps and Azure - no passwords or secrets stored anywhere.
+
+### 🚀 Multi-Stage Pipelines
+Automated deployments through DEV → TEST → PROD with approval gates and environment-specific configurations.
+
+### 🤖 GitHub Copilot Integration
+Custom agents and skills provide intelligent, context-aware guidance throughout the deployment process.
+
+### 📊 Battle-Tested
+Refined through 22+ real pipeline iterations with all critical issues documented and resolved.
+
+### 🎯 Production-Ready
+Includes agent evaluation, red teaming, and security best practices built into the CI/CD pipeline.
+
+---
 
 ## 📚 Documentation
 
-**Getting Started**:
-- [Quick Start](docs/quick-start.md) - Deploy in 30 minutes
-- [Starter Guide](docs/starter-guide.md) - Complete step-by-step
-- [Execution Guide](docs/execution-guide.md) - Using with GitHub Copilot
+### Getting Started
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Complete setup walkthrough
+- [docs/quick-start.md](docs/quick-start.md) - Quick start guide
+- [docs/execution-guide.md](docs/execution-guide.md) - Using with GitHub Copilot
 
-**Understanding the System**:
-- [Architecture](docs/architecture.md) - System design and components
-- [Deployment Guide](docs/deployment-guide.md) - Detailed Azure DevOps setup
-- [Troubleshooting](docs/troubleshooting.md) - All 12 critical lessons learned
+### Understanding the System
+- [docs/architecture.md](docs/architecture.md) - System architecture and design
+- [docs/deployment-guide.md](docs/deployment-guide.md) - Detailed deployment information
+- [docs/naming-convention.md](docs/naming-convention.md) - Resource naming patterns
 
-**Reference**:
-- [API Reference](docs/api-reference.md) - Azure AI SDK documentation
-- [CLI Reference](docs/az-devops-cli-reference.md) - Azure DevOps CLI commands
-- [Full Documentation Index](docs/README.md)
-   - File mapping details
+### Reference
+- [docs/api-reference.md](docs/api-reference.md) - Azure AI SDK documentation
+- [docs/az-devops-cli-reference.md](docs/az-devops-cli-reference.md) - Azure DevOps CLI
+- [docs/troubleshooting.md](docs/troubleshooting.md) - Common issues and solutions
+- [docs/README.md](docs/README.md) - Full documentation index
 
-## 🚀 Quick Start
+---
 
-## ✨ What Makes This Special
+## 🏗️ Repository Structure
 
-### Battle-Tested Through 22 Iterations
-- Refined through 22 real pipeline runs
-- All 12 critical issues documented and solved
-- Best practices baked into every step
+```
+├── scripts/              # Automated setup scripts
+│   └── setup.ps1        # Main setup script
+├── .github/
+│   ├── agents/          # GitHub Copilot custom agents
+│   └── skills/          # Deployment skills (modular scripts)
+│       ├── configuration-management/
+│       ├── resource-creation/
+│       ├── service-connection-setup/
+│       ├── environment-setup/
+│       ├── pipeline-setup/
+│       └── deployment-validation/
+├── .azure-pipelines/    # Azure DevOps pipeline YAML
+│   ├── createagentpipeline.yml
+│   ├── agenteval.yml
+│   └── redteam.yml
+├── src/                 # AI agent application code
+│   ├── agents/          # Agent implementations
+│   ├── evaluation/      # Evaluation logic
+│   └── security/        # Security scanning
+├── docs/                # Documentation
+├── starter-config.json  # Deployment configuration
+└── README.md            # This file
+```
 
-### Zero Secrets Architecture
-- Workload Identity Federation (federated credentials)
-- No passwords or secrets stored anywhere
-- Azure AD managed authentication
+---
 
-### Complete Application Included
-- Ready-to-deploy Python application
-- Multi-stage pipeline (DEV/TEST/PROD)
-- Tests, evaluation, security layers
-- Full source code - customize anything
+## 🎯 Next Steps After Setup
 
-### GitHub Copilot Native
-- Natural language deployment: `@workspace start new AI Foundry project`
-- Intelligent guidance through agent skills
-- Context-aware troubleshooting
+1. **Review your configuration**: Check `starter-config.json`
+2. **Visit Azure DevOps**: See your pipelines and environments
+3. **Run your first deployment**: Trigger the "Create Agent" pipeline
+4. **Monitor in Azure AI Foundry**: View your deployed agent at [ai.azure.com](https://ai.azure.com)
+5. **Customize**: Modify agent code in [src/agents/createagent.py](src/agents/createagent.py)
+
+---
+
+## 🔧 Common Commands
+
+```powershell
+# Re-run setup (replace with your details)
+.\scripts\setup.ps1 -ProjectName "foundrycicd" -ADOProjectName "foundrycicd" -OrganizationUrl "https://dev.azure.com/myorg" -TenantId "..." -SubscriptionId "..."
+
+# Validate deployment
+.\.github\skills\deployment-validation\scripts\validate-deployment.ps1 -UseConfig -Environment 'all'
+
+# Run a pipeline
+az pipelines run --name "Azure AI Foundry - Create Agent"
+
+# Check pipeline status
+az pipelines runs list --top 5
+
+# Clean up resources
+.\.github\skills\cleanup-resources\scripts\cleanup-resources.ps1 -UseConfig
+```
+
+---
 
 ## 📊 Success Metrics
 
 | Metric | Without Template | With Template |
 |--------|-----------------|---------------|
-| Time to first agent | 4-8 hours | < 1 hour |
-| Pipeline iterations | 20+ typical | 1-3 typical |
-| Secrets stored | 3-6 | 0 |
-| Documentation | Scattered | Complete |
-| Troubleshooting | Trial & error | All issues documented |
+| **Time to first agent** | 4-8 hours | < 30 minutes |
+| **Pipeline setup** | 20+ iterations | 1-3 iterations |
+| **Secrets stored** | 3-6 | 0 (federated!) |
+| **Documentation** | Scattered | Complete |
 
-## 🏗️ Template Structure
-- ❌ Manual resource setup
+---
 
-### New Approach (COPILOT_EXECUTION_GUIDE.md)
+## 🤝 Contributing
 
-- ✅ Step-by-step CLI commands
-- ✅ Execute one step at a time
-- ✅ Easy to debug and retry
-- ✅ Bearer token support
-- ✅ Automatic resource discovery and creation
-- ✅ Perfect for AI assistant execution
+Contributions welcome! See [FEEDBACK.md](FEEDBACK.md) for ways to provide feedback and contribute.
 
-## 🎓 Learning Path
+---
 
-### For Beginners
+## 📄 License
 
-1. Read [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Understand the concepts
-2. Follow [MANUAL_CHECKLIST.md](MANUAL_CHECKLIST.md) - Step-by-step verification
-3. Reference [COPILOT_EXECUTION_GUIDE.md](COPILOT_EXECUTION_GUIDE.md) - Get the commands
+This project is provided as a starter template. Customize and use it according to your organization's policies.
 
-### For Experienced Users
+---
 
-1. Start with [COPILOT_EXECUTION_GUIDE.md](COPILOT_EXECUTION_GUIDE.md)
-2. Reference [AZ_DEVOPS_CLI_REFERENCE.md](AZ_DEVOPS_CLI_REFERENCE.md) as needed
-3. Use [API_REFERENCE.md](API_REFERENCE.md) for advanced scenarios
+## 🆘 Troubleshooting
 
-### For Automation
-
-1. Study [COPILOT_EXECUTION_GUIDE.md](COPILOT_EXECUTION_GUIDE.md)
-2. Extract commands for your automation tool
-3. Use bearer token authentication
-4. Implement error handling from troubleshooting sections
-
-## 🔧 Prerequisites
-
-### Required Tools
-
+**Issue: Script fails with authentication error**
 ```powershell
-# Check installations
-git --version        # 2.30+
-az --version         # 2.50+
-python --version     # 3.11+
-$PSVersionTable.PSVersion  # 7.0+
+az login
+az account set --subscription "YOUR_SUBSCRIPTION_ID"
+```
+
+**Issue: Service connection fails**
+- Check that federated credentials are correctly configured
+- Verify issuer and subject match your Azure DevOps organization
+
+**Issue: Pipeline fails with 403 Forbidden**
+- Verify RBAC roles are assigned to the service principal
+- Check service connection authorization in Azure DevOps
+
+**More help:** See [docs/troubleshooting.md](docs/troubleshooting.md) for detailed troubleshooting
+
+---
+
+## 🔗 Resources
+
+- **Azure AI Foundry**: https://ai.azure.com
+- **Azure Portal**: https://portal.azure.com
+- **Azure DevOps**: https://dev.azure.com
+- **Azure AI Documentation**: https://learn.microsoft.com/azure/ai-studio/
+- **Azure DevOps Documentation**: https://learn.microsoft.com/azure/devops/
+
+---
+
+**Ready to deploy?** Start with the [automated setup script](#option-1-automated-setup-script-recommended) or explore the [setup guide](SETUP_GUIDE.md)!
 
