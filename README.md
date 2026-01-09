@@ -172,7 +172,7 @@ Custom agents and skills provide intelligent, context-aware guidance throughout 
 Refined through 22+ real pipeline iterations with all critical issues documented and resolved.
 
 ### 🎯 Production-Ready
-Includes agent evaluation, red teaming, and security best practices built into the CI/CD pipeline.
+Includes agent evaluation, red teaming, and security best practices built into the CI/CD pipeline. Reusable evaluation and security utilities simplify agent development.
 
 ---
 
@@ -182,6 +182,10 @@ Includes agent evaluation, red teaming, and security best practices built into t
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) - Complete setup walkthrough
 - [docs/quick-start.md](docs/quick-start.md) - Quick start guide
 - [docs/execution-guide.md](docs/execution-guide.md) - Using with GitHub Copilot
+
+### Agent Development
+- **[src/README.md](src/README.md) - Evaluation & Security Utilities** ⭐ NEW
+- [src/examples/module_usage_examples.py](src/examples/module_usage_examples.py) - Working examples
 
 ### Understanding the System
 - [docs/architecture.md](docs/architecture.md) - System architecture and design
@@ -216,8 +220,14 @@ Includes agent evaluation, red teaming, and security best practices built into t
 │   └── redteam.yml
 ├── src/                 # AI agent application code
 │   ├── agents/          # Agent implementations
-│   ├── evaluation/      # Evaluation logic
-│   └── security/        # Security scanning
+│   ├── evaluation/      # Reusable evaluation utilities
+│   │   ├── config.py   # Evaluation criteria builders
+│   │   └── evaluators.py # Evaluation runners
+│   ├── security/        # Reusable security utilities
+│   │   ├── evaluators.py # Security criteria & red team config
+│   │   └── validators.py # Input/output validation
+│   ├── examples/        # Usage examples
+│   └── README.md        # Utilities documentation
 ├── docs/                # Documentation
 ├── starter-config.json  # Deployment configuration
 └── README.md            # This file
