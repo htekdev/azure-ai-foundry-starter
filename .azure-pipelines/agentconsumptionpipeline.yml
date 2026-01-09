@@ -65,7 +65,7 @@ stages:
     dependsOn: Build
     condition: succeeded()
     variables:
-      - group: 'aifoundrycicd-dev-vars'  # {projectName}-dev-vars from config.naming.projectName
+      - group: 'REPLACE_WITH_YOUR_PROJECTNAME-dev-vars'  # {projectName}-dev-vars from config.naming.projectName
       # Expected variables in group:
       # - AZURE_AI_PROJECT_DEV
       # - AZURE_OPENAI_ENDPOINT_DEV
@@ -104,7 +104,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Test Existing Agent in Dev'
                   inputs:
-                    azureSubscription: 'aifoundrycicd-dev'  # {projectName}-dev from config.naming.projectName
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-dev'  # {projectName}-dev from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -126,7 +126,7 @@ stages:
     dependsOn: Dev
     condition: succeeded()
     variables:
-      - group: 'foundry-test-vars'  # Variable group for test environment
+      - group: 'REPLACE_WITH_YOUR_PROJECTNAME-test-vars'  # {projectName}-test-vars from config.naming.projectName
       # Expected variables in group:
       # - AZURE_AI_PROJECT_TEST
       # - AZURE_OPENAI_ENDPOINT_TEST
@@ -165,7 +165,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Run Agent Evaluation'
                   inputs:
-                    azureSubscription: 'aifoundrycicd-test'  # {projectName}-test from config.naming.projectName
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-test'  # {projectName}-test from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -187,7 +187,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Run Red Team Testing'
                   inputs:
-                    azureSubscription: 'aifoundrycicd-prod'  # {projectName}-prod from config.naming.projectName
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-test'  # {projectName}-test (runs in test env)
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -219,7 +219,7 @@ stages:
     dependsOn: Test
     condition: succeeded()
     variables:
-      - group: 'foundry-prod-vars'  # Variable group for production environment
+      - group: 'REPLACE_WITH_YOUR_PROJECTNAME-prod-vars'  # {projectName}-prod-vars from config.naming.projectName
       # Expected variables in group:
       # - AZURE_AI_PROJECT_PROD
       # - AZURE_OPENAI_ENDPOINT_PROD
@@ -258,7 +258,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Verify Production Agent'
                   inputs:
-                    azureSubscription: 'azure-foundry-prod'
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-prod'  # {projectName}-prod from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |

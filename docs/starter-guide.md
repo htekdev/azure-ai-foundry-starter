@@ -633,7 +633,7 @@ foreach ($env in $environments) {
 #### Method 1: Azure DevOps Portal
 
 1. Navigate to **Pipelines** → **Library** → **+ Variable group**
-2. Name: `foundry-dev-vars`
+2. Name: `{projectName}-dev-vars` (replace {projectName} with your config.naming.projectName value)
 3. Add variables:
 ```yaml
 AZURE_AI_PROJECT_DEV: https://your-dev-project.api.azureml.ms

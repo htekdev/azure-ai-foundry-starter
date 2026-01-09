@@ -260,7 +260,7 @@ Repeat Step 12 with:
 ### Step 15: Create Variable Group - Dev
 
 1. Navigate to **Pipelines** → **Library** → **+ Variable group**
-2. Name: `foundry-dev-vars`
+2. Name: `{projectName}-dev-vars` (replace {projectName} with your config.naming.projectName value)
 3. Add variables:
 
 | Variable Name | Value | Secret? |
@@ -281,7 +281,7 @@ Repeat Step 12 with:
 ### Step 16: Create Variable Group - Test
 
 Repeat Step 15 with:
-- Name: `foundry-test-vars`
+- Name: `{projectName}-test-vars` (replace {projectName} with your config.naming.projectName value)
 - Replace `DEV` with `TEST` in variable names
 - Use test environment values
 
@@ -292,7 +292,7 @@ Repeat Step 15 with:
 ### Step 17: Create Variable Group - Prod
 
 Repeat Step 15 with:
-- Name: `foundry-prod-vars`
+- Name: `{projectName}-prod-vars` (replace {projectName} with your config.naming.projectName value)
 - Replace `DEV` with `PROD` in variable names
 - Use production environment values
 

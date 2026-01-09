@@ -292,7 +292,8 @@ az devops service-endpoint delete --id $devConn --yes
 
 ### Variable Groups
 ```powershell
-$devVars = az pipelines variable-group list --query "[?name=='foundry-dev-vars'].id" -o tsv
+# Use your projectName from config.naming.projectName
+$devVars = az pipelines variable-group list --query "[?name=='$projectName-dev-vars'].id" -o tsv
 az pipelines variable-group delete --id $devVars --yes
 
 # Repeat for test and prod

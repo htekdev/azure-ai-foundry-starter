@@ -35,7 +35,7 @@ Before using this skill, ensure:
 - Store configuration values (endpoints, resource names, etc.)
 - Can be shared across multiple pipelines
 - Authorized for pipeline access automatically
-- Name format: `foundry-{env}-vars`
+- Name format: `{projectName}-{env}-vars` (where projectName is from config.naming.projectName)
 
 **Environments:**
 - Represent deployment targets (dev, test, production)
@@ -92,7 +92,7 @@ $environments = @{
 Write-Host "`nCreating variable groups..."
 
 foreach ($env in $environments.Keys) {
-    $vgName = "foundry-$env-vars"
+    $vgName = "$projectName-$env-vars"  # Uses projectName from config
     $envConfig = $environments[$env]
     
     # Check if variable group already exists
@@ -219,11 +219,12 @@ Each variable group contains:
 **Solution:** Use alphanumeric characters and hyphens only:
 ```powershell
 # ✅ CORRECT
-$vgName = "foundry-dev-vars"
+$vgName = "$projectName-dev-vars"  # Uses projectName from config
 
 # ❌ WRONG
 $vgName = "foundry_dev_vars"  # No underscores
 $vgName = "foundry dev vars"  # No spaces
+$vgName = "foundry-dev-vars"  # Don't hardcode - use config.naming.projectName
 ```
 
 #### 2. Variable Group Not Authorized for Pipeline
@@ -270,7 +271,7 @@ $config.azure.aiFoundry.dev.projectEndpoint  # Should not be empty
 
 1. **Use descriptive variable names** - Match Azure resource naming conventions
 2. **Authorize variable groups immediately** - Use `--authorize true` flag
-3. **Keep variable group names consistent** - Follow the pattern: `foundry-{env}-vars`
+3. **Keep variable group names consistent** - Follow the pattern: `{projectName}-{env}-vars` from config.naming.projectName
 4. **Document custom variables** - Add comments in your pipeline YAML
 5. **Use environments for approvals** - Enable approval gates for production
 6. **Separate secrets** - Use Azure Key Vault for sensitive values (not variable groups)

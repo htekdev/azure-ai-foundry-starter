@@ -223,7 +223,7 @@ Write-Host ""
 Write-Host "  3. (Optional) Clean up Azure DevOps resources:" -ForegroundColor Gray
 Write-Host "     - Delete repository: azure-ai-foundry-app" -ForegroundColor DarkGray
 Write-Host "     - Delete service connections: {projectName}-dev/test/prod" -ForegroundColor DarkGray
-Write-Host "     - Delete variable groups: foundry-dev/test/prod-vars" -ForegroundColor DarkGray
+Write-Host "     - Delete variable groups: {projectName}-dev/test/prod-vars" -ForegroundColor DarkGray
 Write-Host "     - Delete pipelines" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  4. (Optional) Reset configuration file:" -ForegroundColor Gray
