@@ -988,7 +988,8 @@ az devops team list --output table
 ### Update Variable Group
 
 ```powershell
-$vgName = "foundry-dev-vars"
+# Use projectName from config.naming.projectName
+$vgName = "$projectName-dev-vars"
 $vgId = az pipelines variable-group list `
     --query "[?name=='$vgName'].id" `
     --output tsv

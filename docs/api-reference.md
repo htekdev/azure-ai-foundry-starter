@@ -755,8 +755,8 @@ $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
 **Request Body**:
 ```json
 {
-  "name": "foundry-dev-vars",
-  "description": "Variables for dev environment",
+  "name": "aifoundrycicd-dev-vars",
+  "description": "Variables for dev environment (name pattern: {projectName}-dev-vars)",
   "type": "Vsts",
   "variables": {
     "AZURE_AI_PROJECT_DEV": {
@@ -779,8 +779,8 @@ curl -X POST \
   -H "Authorization: Basic $B64_PAT" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "foundry-dev-vars",
-    "description": "Variables for dev environment",
+    "name": "aifoundrycicd-dev-vars",
+    "description": "Variables for dev environment (pattern: {projectName}-dev-vars)",
     "type": "Vsts",
     "variables": {
       "AZURE_AI_PROJECT_DEV": {
@@ -794,7 +794,7 @@ curl -X POST \
 ```powershell
 $uri = "https://dev.azure.com/$organization/$project/_apis/distributedtask/variablegroups?api-version=7.1-preview.2"
 $body = @{
-    name = "foundry-dev-vars"
+    name = "aifoundrycicd-dev-vars"  # Pattern: {projectName}-dev-vars
     description = "Variables for dev environment"
     type = "Vsts"
     variables = @{
@@ -820,7 +820,7 @@ $response = Invoke-RestMethod -Uri $uri -Method Post -Headers $headers -Body $bo
 ```json
 {
   "id": 123,
-  "name": "foundry-dev-vars",
+  "name": "aifoundrycicd-dev-vars",
   "description": "Variables for dev environment",
   "type": "Vsts",
   "variables": {
@@ -1061,7 +1061,7 @@ Write-Host "✓ Service connection created: $($sc.name)"
 # 3. Create Variable Group
 $vgUri = "https://dev.azure.com/$organization/$project/_apis/distributedtask/variablegroups?api-version=7.1-preview.2"
 $vgBody = @{
-    name = "foundry-dev-vars"
+    name = "aifoundrycicd-dev-vars"  # Pattern: {projectName}-dev-vars
     type = "Vsts"
     variables = @{
         "AZURE_AI_PROJECT_DEV" = @{ value = "https://dev-project.api.azureml.ms"; isSecret = $false }
