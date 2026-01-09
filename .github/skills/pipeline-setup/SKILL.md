@@ -36,6 +36,8 @@ This skill includes `scripts/create-pipelines.ps1` which automates the entire pi
 
 **What it does automatically**:
 1. ✅ **Updates pipeline YAML files** - Replaces `REPLACE_WITH_YOUR_PROJECTNAME` placeholder with actual `config.naming.projectName`
+   - Variable groups: `REPLACE_WITH_YOUR_PROJECTNAME-dev-vars` → `myproject-dev-vars`
+   - Service connections: `REPLACE_WITH_YOUR_PROJECTNAME-dev` → `myproject-dev`
 2. ✅ **Commits and pushes changes** - Updates YAML files in the repository
 3. ✅ **Creates pipelines** - Sets up pipelines from the updated YAML files
 
@@ -47,7 +49,8 @@ cd .github/skills/pipeline-setup
 
 **Why is this needed?**
 - Variable groups are named `{projectName}-{env}-vars` (e.g., `myproject-dev-vars`)
-- Pipeline YAML files must reference the correct variable group names
+- Service connections are named `{projectName}-{env}` (e.g., `myproject-dev`)
+- Pipeline YAML files must reference the correct names
 - The script ensures consistency between created infrastructure and pipeline configuration
 
 ## Pipeline Templates Available
@@ -98,15 +101,25 @@ The `create-pipelines.ps1` script **automatically**:
 3. Commits and pushes the updated YAML files back to the repository
 4. Creates the pipelines from the updated YAML files
 
-**Example replacement**:
+**Example replacements**:
 ```yaml
-# Before (in repository)
+# Variable groups - Before
 variables:
   - group: 'REPLACE_WITH_YOUR_PROJECTNAME-dev-vars'
 
-# After (automated replacement)
+# Variable groups - After
 variables:
   - group: 'myproject-dev-vars'  # Where myproject = config.naming.projectName
+
+# Service connections - Before
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-dev'
+
+# Service connections - After
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'myproject-dev'  # Where myproject = config.naming.projectName
 ```
 
 **Manual alternative** (if needed):
@@ -115,7 +128,7 @@ variables:
 git clone https://dev.azure.com/$org/$project/_git/$repoName
 cd $repoName
 
-# Replace placeholders in YAML files
+# Replace placeholders in YAML files (both variable groups and service connections)
 $yamlFiles = Get-ChildItem -Path ".azure-pipelines" -Filter "*.yml"
 foreach ($file in $yamlFiles) {
     (Get-Content $file.FullName) -replace "REPLACE_WITH_YOUR_PROJECTNAME", $projectName | Set-Content $file.FullName

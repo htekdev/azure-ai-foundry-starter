@@ -90,7 +90,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Deploy Agent in Dev'
                   inputs:
-                    azureSubscription: 'foundrycicd-dev'
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-dev'  # {projectName}-dev from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -150,7 +150,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Deploy Agent in Test'
                   inputs:
-                    azureSubscription: 'foundrycicd-test'
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-test'  # {projectName}-test from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -210,7 +210,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Deploy Agent in Production'
                   inputs:
-                    azureSubscription: 'foundrycicd-prod'
+                    azureSubscription: 'REPLACE_WITH_YOUR_PROJECTNAME-prod'  # {projectName}-prod from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |

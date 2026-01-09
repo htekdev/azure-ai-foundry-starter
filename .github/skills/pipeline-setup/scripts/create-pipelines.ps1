@@ -114,11 +114,11 @@ try {
         if (Test-Path $yamlFile) {
             $content = Get-Content $yamlFile -Raw
             
-            # Check if placeholder exists
+            # Check if placeholder exists (for variable groups or service connections)
             if ($content -match "REPLACE_WITH_YOUR_PROJECTNAME") {
                 Write-Host "  [INFO] Updating $yamlFile with projectName: $projectName" -ForegroundColor Blue
                 
-                # Replace placeholder with actual projectName
+                # Replace placeholder with actual projectName (handles both variable groups and service connections)
                 $updatedContent = $content -replace "REPLACE_WITH_YOUR_PROJECTNAME", $projectName
                 Set-Content -Path $yamlFile -Value $updatedContent -NoNewline
                 
