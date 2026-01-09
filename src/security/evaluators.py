@@ -213,6 +213,10 @@ def to_json_primitive(obj: Any) -> Any:
     """
     Convert Azure AI objects to JSON-serializable primitives.
     
+    Note: Uses vars() to extract object attributes. Be cautious with objects
+    that may contain sensitive data. The function filters out private attributes
+    (starting with '_') but sensitive public attributes will be included.
+    
     Args:
         obj: Object to convert
         
@@ -236,7 +240,8 @@ def to_json_primitive(obj: Any) -> Any:
             except Exception:
                 pass
     
-    # Try to extract __dict__
+    # Extract __dict__ but filter out private attributes (starting with '_')
+    # Note: This may still expose sensitive public attributes
     if hasattr(obj, "__dict__"):
         return to_json_primitive({k: v for k, v in vars(obj).items() if not k.startswith("_")})
     

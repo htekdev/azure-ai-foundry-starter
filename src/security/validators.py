@@ -28,6 +28,9 @@ class InputValidator:
         """
         Sanitize user input by removing potentially harmful content.
         
+        Note: This is basic sanitization. For production use with HTML content,
+        consider using a dedicated library like bleach or html5lib.
+        
         Args:
             text: Input text to sanitize
             max_length: Optional maximum length to enforce
@@ -45,8 +48,9 @@ class InputValidator:
         if max_length and len(text) > max_length:
             text = text[:max_length]
         
-        # Remove HTML tags (basic sanitization)
-        text = re.sub(r'<[^>]+>', '', text)
+        # Basic HTML tag removal (for production, use a proper HTML sanitization library)
+        # This is a simple filter and may not catch all XSS vectors
+        text = re.sub(r'<[^>]*>', '', text)
         
         return text.strip()
     
@@ -101,7 +105,8 @@ class InputValidator:
         if allowed_schemes is None:
             allowed_schemes = ['http', 'https']
         
-        pattern = r'^(https?|ftp)://[^\s/$.?#].[^\s]*$'
+        # Pattern allows http, https, and ftp - but scheme check will enforce allowed_schemes
+        pattern = r'^[a-zA-Z][a-zA-Z0-9+.-]*://[^\s/$.?#].[^\s]*$'
         if not re.match(pattern, url, re.IGNORECASE):
             return False
         
@@ -177,7 +182,8 @@ class OutputValidator:
     SENSITIVE_PATTERNS = {
         'credit_card': r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b',
         'ssn': r'\b\d{3}-\d{2}-\d{4}\b',
-        'api_key': r'\b[A-Za-z0-9]{32,}\b',
+        # More specific API key patterns to reduce false positives
+        'api_key': r'\b[A-Za-z0-9]{40,}\b',  # Increased minimum length
         'password': r'password\s*[:=]\s*[^\s]+',
         'bearer_token': r'Bearer\s+[A-Za-z0-9\-._~+/]+=*',
         'private_key': r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----',
@@ -230,8 +236,8 @@ class OutputValidator:
         masked = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', 
                        'XXX-XX-XXXX', masked)
         
-        # Mask API keys (long alphanumeric strings)
-        masked = re.sub(r'\b[A-Za-z0-9]{32,}\b', 
+        # Mask API keys (long alphanumeric strings - 40+ chars to reduce false positives)
+        masked = re.sub(r'\b[A-Za-z0-9]{40,}\b', 
                        'XXXXXXXXXXXX', masked)
         
         # Mask passwords

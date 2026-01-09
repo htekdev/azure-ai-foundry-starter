@@ -3,12 +3,17 @@ Example demonstrating usage of the evaluation and security utility modules.
 
 This script shows how to use the reusable evaluation and security utilities
 for Azure AI agent quality assessment and safety validation.
+
+Note: This is a standalone example script that modifies sys.path for demonstration
+purposes. In production code, use proper package installation (pip install -e .)
+or structure your imports to avoid sys.path manipulation.
 """
 
 import sys
 import os
 
-# Add parent directory to path for imports
+# Add parent directory to path for imports (for example purposes only)
+# In production, install the package properly: pip install -e .
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from src.evaluation import (
