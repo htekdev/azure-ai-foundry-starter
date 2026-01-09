@@ -221,6 +221,43 @@ try {
             # Wait a moment for resource to be fully provisioned
             Start-Sleep -Seconds 3
             
+            # ===== CREATE MODEL DEPLOYMENT =====
+            $deploymentName = "gpt-4o"
+            Write-Host "    Checking for model deployment: $deploymentName..." -ForegroundColor Gray
+            
+            $ErrorActionPreference = 'Continue'
+            $existingDeployment = az cognitiveservices account deployment show `
+                --name $resourceName `
+                --resource-group $rgName `
+                --deployment-name $deploymentName `
+                2>$null
+            $ErrorActionPreference = 'Stop'
+            
+            if ($LASTEXITCODE -eq 0 -and $existingDeployment) {
+                Write-Host "    [OK] Model deployment '$deploymentName' already exists" -ForegroundColor Green
+            }
+            else {
+                Write-Host "    Creating model deployment: $deploymentName..." -ForegroundColor Gray
+                $deploymentJson = az cognitiveservices account deployment create `
+                    --name $resourceName `
+                    --resource-group $rgName `
+                    --deployment-name $deploymentName `
+                    --model-name "gpt-4o" `
+                    --model-version "2024-08-06" `
+                    --model-format "OpenAI" `
+                    --sku-capacity 10 `
+                    --sku-name "Standard" `
+                    2>&1
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "    [OK] Model deployment '$deploymentName' created successfully" -ForegroundColor Green
+                }
+                else {
+                    Write-Host "    [WARN] Model deployment creation failed: $deploymentJson" -ForegroundColor Yellow
+                    Write-Host "    [INFO] You may need to create the deployment manually in Azure AI Foundry portal" -ForegroundColor Yellow
+                }
+            }
+            
             # ===== CREATE AI FOUNDRY PROJECT =====
             $ErrorActionPreference = 'Continue'
             $existingProject = az cognitiveservices account project show `
