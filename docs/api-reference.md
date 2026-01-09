@@ -752,6 +752,8 @@ $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
 
 **Description**: Create a new variable group
 
+> **Note**: Variable group names follow the pattern `{projectName}-{env}-vars` where `projectName` comes from `config.naming.projectName`. Examples below use `aifoundrycicd` as the project name.
+
 **Request Body**:
 ```json
 {
