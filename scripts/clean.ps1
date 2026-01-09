@@ -276,31 +276,31 @@ Write-Host ""
 if ($DryRun) {
     Write-Host "[DRY RUN COMPLETE]" -ForegroundColor Yellow
     Write-Host "  No resources were actually deleted" -ForegroundColor Gray
-    Write-Host "  Run without -DryRun to perform actual cleanup" -ForegroundColor Gray
+    Write-Host "  Run without the DryRun flag to perform actual cleanup" -ForegroundColor Gray
 } else {
-    Write-Host "[CLEANUP SUMMARY]:" -ForegroundColor Cyan
+    Write-Host "[CLEANUP SUMMARY]" -ForegroundColor Cyan
     
     if (-not $SkipAzureResources) {
-        Write-Host "  ✓ Azure Resources" -ForegroundColor Green
+        Write-Host "  [OK] Azure Resources" -ForegroundColor Green
     } else {
-        Write-Host "  ○ Azure Resources (skipped)" -ForegroundColor Gray
+        Write-Host "  [ ] Azure Resources (skipped)" -ForegroundColor Gray
     }
     
     if (-not $SkipDevOps) {
-        Write-Host "  ✓ Azure DevOps" -ForegroundColor Green
+        Write-Host "  [OK] Azure DevOps" -ForegroundColor Green
     } else {
-        Write-Host "  ○ Azure DevOps (skipped)" -ForegroundColor Gray
+        Write-Host "  [ ] Azure DevOps (skipped)" -ForegroundColor Gray
     }
     
     if (-not $SkipConfigReset) {
-        Write-Host "  ✓ Configuration File" -ForegroundColor Green
+        Write-Host "  [OK] Configuration File" -ForegroundColor Green
     } else {
-        Write-Host "  ○ Configuration File (skipped)" -ForegroundColor Gray
+        Write-Host "  [ ] Configuration File (skipped)" -ForegroundColor Gray
     }
 }
 
 Write-Host ""
-Write-Host "[NEXT STEPS]:" -ForegroundColor Cyan
+Write-Host "NEXT STEPS" -ForegroundColor Cyan
 Write-Host "  1. Verify Azure resources are deleted:" -ForegroundColor Gray
 Write-Host "     https://portal.azure.com" -ForegroundColor DarkGray
 Write-Host ""
@@ -317,7 +317,7 @@ Write-Host ""
 if (-not $DryRun) {
     Write-Host "[SUCCESS] Complete cleanup finished successfully!" -ForegroundColor Green
 } else {
-    Write-Host "[DRY RUN] Preview completed. Run without -DryRun to execute." -ForegroundColor Yellow
+    Write-Host "[DRY RUN] Preview completed. Run without the DryRun flag to execute." -ForegroundColor Yellow
 }
 
 Write-Host ""

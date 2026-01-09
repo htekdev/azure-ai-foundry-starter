@@ -140,13 +140,33 @@ if (-not $OnlyConfig) {
     # Check Pipelines
     Write-Host "`n[PIPELINES]:" -ForegroundColor Cyan
     try {
-        $pipelines = az pipelines list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
-        if ($pipelines -and $pipelines.Count -gt 0) {
-            foreach ($pipeline in $pipelines) {
-                Write-Host "  [X] $($pipeline.Name)" -ForegroundColor Red
+        # Get repository name from git origin
+        $gitOrigin = git remote get-url origin 2>$null
+        $repoName = $null
+        if ($gitOrigin -match '/([^/]+?)(\.git)?$') {
+            $repoName = $matches[1]
+        }
+        
+        if (-not $repoName) {
+            Write-Host "  [WARNING] Could not determine repository name from git origin" -ForegroundColor Yellow
+            $repoName = "azure-ai-foundry-starter"
+        }
+        
+        $allPipelines = az pipelines list -o json | ConvertFrom-Json
+        $filteredPipelines = @()
+        foreach ($p in $allPipelines) {
+            $details = az pipelines show --id $p.id --query '{Name:name, Id:id, Repo:repository.name, YamlPath:process.yamlFilename}' -o json 2>$null | ConvertFrom-Json
+            if ($details.Repo -eq $repoName -and $details.YamlPath -like ".azure-pipelines/*") {
+                $filteredPipelines += $details
+            }
+        }
+        
+        if ($filteredPipelines.Count -gt 0) {
+            foreach ($pipeline in $filteredPipelines) {
+                Write-Host "  [X] $($pipeline.Name) ($($pipeline.YamlPath))" -ForegroundColor Red
             }
         } else {
-            Write-Host "  [INFO] No pipelines found matching pattern" -ForegroundColor Gray
+            Write-Host "  [INFO] No pipelines found in repository '$repoName' with .azure-pipelines/*.yml" -ForegroundColor Gray
         }
     } catch {
         Write-Host "  [WARNING] Could not check pipelines: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -197,10 +217,30 @@ if (-not $OnlyConfig) {
     # Delete Pipelines
     Write-Host "`n[PIPELINES] Deleting Pipelines..." -ForegroundColor Cyan
     try {
-        $pipelines = az pipelines list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
-        if ($pipelines -and $pipelines.Count -gt 0) {
-            foreach ($pipeline in $pipelines) {
-                Write-Host "  [DELETE] Deleting: $($pipeline.Name)..." -ForegroundColor Yellow
+        # Get repository name from git origin
+        $gitOrigin = git remote get-url origin 2>$null
+        $repoName = $null
+        if ($gitOrigin -match '/([^/]+?)(\.git)?$') {
+            $repoName = $matches[1]
+        }
+        
+        if (-not $repoName) {
+            Write-Host "  [WARNING] Could not determine repository name from git origin" -ForegroundColor Yellow
+            $repoName = "azure-ai-foundry-starter"
+        }
+        
+        $allPipelines = az pipelines list -o json | ConvertFrom-Json
+        $pipelinesToDelete = @()
+        foreach ($p in $allPipelines) {
+            $details = az pipelines show --id $p.id --query '{Name:name, Id:id, Repo:repository.name, YamlPath:process.yamlFilename}' -o json 2>$null | ConvertFrom-Json
+            if ($details.Repo -eq $repoName -and $details.YamlPath -like ".azure-pipelines/*") {
+                $pipelinesToDelete += $details
+            }
+        }
+        
+        if ($pipelinesToDelete.Count -gt 0) {
+            foreach ($pipeline in $pipelinesToDelete) {
+                Write-Host "  [DELETE] Deleting: $($pipeline.Name) ($($pipeline.YamlPath))..." -ForegroundColor Yellow
                 try {
                     az pipelines delete --id $pipeline.Id --yes 2>$null
                     Write-Host "     [OK] Pipeline deleted" -ForegroundColor Green
@@ -209,7 +249,7 @@ if (-not $OnlyConfig) {
                 }
             }
         } else {
-            Write-Host "  [INFO] No pipelines to delete" -ForegroundColor Gray
+            Write-Host "  [INFO] No pipelines to delete in repository '$repoName'" -ForegroundColor Gray
         }
     } catch {
         Write-Host "  [ERROR] Could not delete pipelines: $($_.Exception.Message)" -ForegroundColor Red
