@@ -222,11 +222,19 @@ try {
     if (-not $SkipRbac) {
         Write-Step "Adding Cognitive Services User Role"
         
+        # Derive resource group names from configuration
+        $rgBase = "rg-$($config.naming.projectName)"
+        
+        # AI Services resource names follow standard pattern: aif-foundry-{env}
+        # Note: If your deployment uses different resource names, update this map accordingly
         $resourceMap = @{
-            "dev" = @{ rg = "rg-ai-foundry-starter-dev"; resource = "aif-foundry-dev" }
-            "test" = @{ rg = "rg-ai-foundry-starter-test"; resource = "aif-test-6654" }
-            "prod" = @{ rg = "rg-ai-foundry-starter-prod"; resource = "aif-foundry-prod" }
+            "dev" = @{ rg = "$rgBase-dev"; resource = "aif-foundry-dev" }
+            "test" = @{ rg = "$rgBase-test"; resource = "aif-foundry-test" }
+            "prod" = @{ rg = "$rgBase-prod"; resource = "aif-foundry-prod" }
         }
+        
+        Write-Info "Using resource group pattern: $rgBase-{env}"
+        Write-Info "Using AI Services pattern: aif-foundry-{env}"
         
         foreach ($env in $Environments) {
             if (-not $resourceMap.ContainsKey($env)) {

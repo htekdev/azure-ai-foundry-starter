@@ -97,19 +97,26 @@ Based on your `starter-config.json`:
 
 ### 1. Resource Groups (with all contents)
 
+Resource groups follow the naming pattern: `rg-{projectName}-{env}` where `{projectName}` is derived from `config.naming.projectName`.
+
 ```
-rg-ai-foundry-starter-dev
+rg-{projectName}-dev
   ├── AI Foundry Project (aif-project-dev)
   ├── AI Services (aif-foundry-dev)
   ├── Deployments
   └── All other resources
 
-rg-ai-foundry-starter-test
+rg-{projectName}-test
   └── (similar structure)
 
-rg-ai-foundry-starter-prod
+rg-{projectName}-prod
   └── (similar structure)
 ```
+
+**Example**: If `config.naming.projectName = "ai-foundry-starter"`, resource groups will be named:
+- `rg-ai-foundry-starter-dev`
+- `rg-ai-foundry-starter-test`
+- `rg-ai-foundry-starter-prod`
 
 **Note**: Deleting resource groups automatically deletes all contained resources.
 
@@ -144,8 +151,12 @@ az account set --subscription $config.azure.subscriptionId
 ### Phase 2: Discovery
 
 ```powershell
+# Derive resource group prefix from project name
+$projectName = $config.naming.projectName
+$rgPrefix = "rg-$projectName"
+
 # Find all resource groups matching pattern
-az group list --query "[?starts_with(name, 'rg-ai-foundry-starter')]"
+az group list --query "[?starts_with(name, '$rgPrefix')]"
 
 # Check Service Principal
 az ad sp show --id $config.servicePrincipal.appId
@@ -223,7 +234,10 @@ Write-Host "Resource Group Base: rg-$($config.naming.projectName)"
 # https://portal.azure.com/#view/HubsExtension/BrowseResourceGroups
 
 # 5. Verify deletion complete
-az group list --query "[?starts_with(name, 'rg-ai-foundry-starter')]" -o table
+# Use resource group prefix from your configuration
+$config = Get-Content .\starter-config.json | ConvertFrom-Json
+$rgPrefix = "rg-$($config.naming.projectName)"
+az group list --query "[?starts_with(name, '$rgPrefix')]" -o table
 az ad sp show --id $config.servicePrincipal.appId 2>$null
 ```
 
@@ -233,7 +247,9 @@ az ad sp show --id $config.servicePrincipal.appId 2>$null
 
 ```powershell
 # Verify resource groups are deleted
-az group list --query "[?starts_with(name, 'rg-ai-foundry-starter')]" -o table
+$config = Get-Content .\starter-config.json | ConvertFrom-Json
+$rgPrefix = "rg-$($config.naming.projectName)"
+az group list --query "[?starts_with(name, '$rgPrefix')]" -o table
 
 # Should return empty or show "Deleting" state
 ```
@@ -402,8 +418,10 @@ az resource delete --ids <resource-id>
 cd .github/skills/cleanup-resources/scripts
 .\cleanup-resources.ps1
 
-# 2. Verify deletion
-az group list --query "[?starts_with(name, 'rg-ai-foundry-starter')]" -o table
+# 2. Verify deletion (uses your configured project name)
+$config = Get-Content .\starter-config.json | ConvertFrom-Json
+$rgPrefix = "rg-$($config.naming.projectName)"
+az group list --query "[?starts_with(name, '$rgPrefix')]" -o table
 
 # 3. Recreate from scratch
 cd ../../resource-creation
@@ -437,13 +455,13 @@ The cleanup script includes multiple safety features:
 The following resources will be PERMANENTLY DELETED:
 
 📦 Resource Groups:
-  ❌ rg-ai-foundry-starter-dev (eastus)
+  ❌ rg-{projectName}-dev (eastus)
      Contains 3 resources:
        - aif-foundry-dev (accounts)
        - aif-project-dev (workspaces)
        - storage-dev (storageAccounts)
-  ❌ rg-ai-foundry-starter-test (eastus)
-  ❌ rg-ai-foundry-starter-prod (eastus)
+  ❌ rg-{projectName}-test (eastus)
+  ❌ rg-{projectName}-prod (eastus)
 
 👤 Service Principal:
   ❌ sp-aif-demo-cicd (App ID: f1ef8b31-...)

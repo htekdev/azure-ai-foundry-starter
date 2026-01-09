@@ -234,6 +234,45 @@ To use Agent Skills in VS Code:
 3. **Restart VS Code**
 4. Skills in `.github/skills/` are automatically discovered
 
+## Resource Naming Conventions
+
+All Azure resources follow a consistent naming pattern derived from `config.naming.projectName` in `starter-config.json`:
+
+### Resource Groups
+**Pattern**: `rg-{projectName}-{env}`
+
+**Example**: If `config.naming.projectName = "ai-foundry-starter"`:
+- Development: `rg-ai-foundry-starter-dev`
+- Test: `rg-ai-foundry-starter-test`
+- Production: `rg-ai-foundry-starter-prod`
+
+### Service Principal
+**Pattern**: `sp-{projectName}`
+
+**Example**: `sp-ai-foundry-starter`
+
+### Service Connections
+**Pattern**: `{projectName}-{env}`
+
+**Example**: 
+- `ai-foundry-starter-dev`
+- `ai-foundry-starter-test`
+- `ai-foundry-starter-prod`
+
+### Variable Groups
+**Pattern**: `foundry-{env}-vars`
+
+**Fixed names**:
+- `foundry-dev-vars`
+- `foundry-test-vars`
+- `foundry-prod-vars`
+
+**Important**: 
+- ✅ All resource names are derived from configuration
+- ✅ Never hardcode resource names like `rg-ai-foundry-starter-{env}`
+- ✅ Always use `config.naming.projectName` to build resource names
+- ✅ This ensures consistency when deploying with custom project names
+
 ## Best Practices
 
 ### When creating new skills:

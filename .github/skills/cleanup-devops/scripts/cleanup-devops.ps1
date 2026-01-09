@@ -349,13 +349,13 @@ if (-not $SkipConfig) {
             }
             servicePrincipal = @{
                 appId = ""
-                displayName = "sp-rg-ai-foundry-starter"
+                displayName = "sp-{projectName}"  # Derived from naming.projectName
             }
             naming = @{
-                projectName = ""
+                projectName = ""  # Used to derive resource names (e.g., rg-{projectName}-{env})
             }
             resources = @{
-                resourceGroupPrefix = "rg-ai-foundry-starter"
+                resourceGroupPrefix = "rg-{projectName}"  # Derived pattern, not literal
                 aiHubPrefix = "aif-hub"
                 aiProjectPrefix = "aif-project"
                 aiServicesPrefix = "aif-foundry"
