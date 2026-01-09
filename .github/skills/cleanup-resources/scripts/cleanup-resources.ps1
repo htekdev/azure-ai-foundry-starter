@@ -6,7 +6,7 @@
 # WARNING: This action is IRREVERSIBLE. All resources will be permanently deleted.
 #
 # What gets deleted:
-# - All Resource Groups (rg-ai-foundry-starter-dev, test, prod)
+# - All Resource Groups (rg-{projectName}-dev, test, prod) based on config.naming.projectName
 # - Service Principal and all federated credentials
 # - All AI Foundry Projects and AI Services
 # - All role assignments
