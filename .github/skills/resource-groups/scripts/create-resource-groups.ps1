@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Creates Azure Resource Groups for Azure AI Foundry multi-environment deployment.
@@ -63,13 +63,13 @@ if ((Test-Path $azCliPath) -and ($env:Path -notlike "*$azCliPath*")) {
 
 # Load configuration if UseConfig is specified
 if ($UseConfig) {
-    . "$PSScriptRoot/../configuration-management/config-functions.ps1"
+    . "$PSScriptRoot/../../configuration-management/config-functions.ps1"
     $config = Get-StarterConfig
     
     if ($config) {
-        $ResourceGroupBaseName = $config.azure.resourceGroup
+        $ResourceGroupBaseName = "rg-$($config.naming.projectName)"
         $Location = $config.azure.location
-        Write-Host "✅ Loaded configuration from starter-config.json" -ForegroundColor Green
+        Write-Host "[OK] Loaded configuration from starter-config.json" -ForegroundColor Green
     }
     else {
         Write-Error "Could not load configuration. Run: ../configuration-management/configure-starter.ps1 -Interactive"
@@ -126,7 +126,7 @@ try {
         try {
             $rgExistsResult = az group exists --name $rgName
             if ($rgExistsResult -eq "true") {
-                Write-Host "    ✅ Resource group already exists: $rgName" -ForegroundColor Green
+                Write-Host "    [OK] Resource group already exists: $rgName" -ForegroundColor Green
                 $result.Status = "Skipped"
                 $result.Message = "Already exists"
                 $results.Summary.Skipped++
@@ -140,7 +140,7 @@ try {
                     --only-show-errors 2>&1
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "    ✅ Resource group created successfully" -ForegroundColor Green
+                    Write-Host "    [OK] Resource group created successfully" -ForegroundColor Green
                     $result.Status = "Created"
                     $result.Message = "Created in $Location"
                     $results.Summary.Created++
@@ -151,7 +151,7 @@ try {
             }
         }
         catch {
-            Write-Host "    ❌ Failed to create resource group: $_" -ForegroundColor Red
+            Write-Host "    [ERROR] Failed to create resource group: $_" -ForegroundColor Red
             $result.Status = "Failed"
             $result.Message = $_.Exception.Message
             $results.Summary.Failed++
@@ -174,15 +174,15 @@ try {
     
     # Exit with appropriate code
     if ($results.Summary.Failed -gt 0) {
-        Write-Host "❌ Some resource groups failed to create" -ForegroundColor Red
+        Write-Host "[ERROR] Some resource groups failed to create" -ForegroundColor Red
         exit 1
     }
     elseif ($results.Summary.Created -gt 0) {
-        Write-Host "✅ Resource group creation completed successfully" -ForegroundColor Green
+        Write-Host "[OK] Resource group creation completed successfully" -ForegroundColor Green
         exit 0
     }
     else {
-        Write-Host "✅ All resource groups already exist" -ForegroundColor Green
+        Write-Host "[OK] All resource groups already exist" -ForegroundColor Green
         exit 0
     }
 }

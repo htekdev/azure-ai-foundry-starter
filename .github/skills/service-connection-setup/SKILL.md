@@ -72,10 +72,11 @@ Write-Host "✓ Configuration loaded"
 
 ```powershell
 # Service connection configuration
+$projectName = $config.naming.projectName
 $environments = @("dev", "test", "prod")
 
 foreach ($env in $environments) {
-    $scName = "azure-foundry-$env"
+    $scName = "$projectName-$env"
     
     # Check if service connection already exists
     $existingSc = az devops service-endpoint list --query "[?name=='$scName'].id" --output tsv
@@ -185,7 +186,9 @@ Write-Host "`n=== Verifying RBAC Permissions ==="
 $spObjectId = (az ad sp show --id $spAppId --query id -o tsv)
 
 # Check Contributor role on resource group
-$rgScope = "/subscriptions/$subscriptionId/resourceGroups/$($config.azure.resourceGroup)"
+# Derive resource group name from project name
+$rgName = "rg-$($config.naming.projectName)"
+$rgScope = "/subscriptions/$subscriptionId/resourceGroups/$rgName"
 $contributorRole = az role assignment list --assignee $spObjectId --scope $rgScope --role "Contributor" --query "[].roleDefinitionName" -o tsv
 
 if ($contributorRole) {
@@ -204,7 +207,9 @@ $envs = @{
 
 foreach ($env in $envs.Keys) {
     $projectName = $envs[$env]
-    $projectScope = "/subscriptions/$subscriptionId/resourceGroups/$($config.azure.resourceGroup)/providers/Microsoft.MachineLearningServices/workspaces/$projectName"
+    # Derive resource group name from project name
+    $rgName = "rg-$($config.naming.projectName)"
+    $projectScope = "/subscriptions/$subscriptionId/resourceGroups/$rgName/providers/Microsoft.MachineLearningServices/workspaces/$projectName"
     
     $cognitiveRole = az role assignment list --assignee $spObjectId --scope $projectScope --role "Cognitive Services User" --query "[].roleDefinitionName" -o tsv
     
@@ -231,12 +236,13 @@ Write-Host "`n✅ Service connection setup complete!"
 **Solution:**
 ```powershell
 # Get the correct values from Azure DevOps
-$scId = az devops service-endpoint list --query "[?name=='azure-foundry-dev'].id" --output tsv
+# Replace {projectName} with your actual project name from config.naming.projectName
+$scId = az devops service-endpoint list --query "[?name=='{projectName}-dev'].id" --output tsv
 $orgName = $org.Split('/')[-1]
 
 # Correct format
 $issuer = "https://vstoken.dev.azure.com/$orgName"
-$subject = "sc://$orgName/$project/azure-foundry-dev"
+$subject = "sc://$orgName/$project/{projectName}-dev"
 
 # Delete old credential
 $credId = az ad app federated-credential list --id $spAppId --query "[?name=='azure-devops-$project-dev'].id" -o tsv
@@ -252,7 +258,7 @@ az ad app federated-credential create --id $spAppId --parameters "{ ... }"
 ✅ CORRECT: issuer = "https://vstoken.dev.azure.com/foundry-cicd-demo-01"
 
 ❌ WRONG: subject = "/eid1/c/pub/t/.../sc/{serviceConnectionId}"
-✅ CORRECT: subject = "sc://foundry-cicd-demo-01/foundry-cicd-demo-01/azure-foundry-dev"
+✅ CORRECT: subject = "sc://foundry-cicd-demo-01/foundry-cicd-demo-01/{projectName}-dev"
 ```
 
 #### 2. Service Connection Not Authorized

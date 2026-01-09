@@ -51,7 +51,8 @@ $project = $config.azureDevOps.projectName
 $repoName = "azure-ai-foundry-app"
 $spAppId = $config.servicePrincipal.appId
 $subscriptionId = $config.azure.subscriptionId
-$resourceGroup = $config.azure.resourceGroup
+# Derive resource group name from project name
+$resourceGroup = "rg-$($config.naming.projectName)"
 
 Write-Host "=== Azure AI Foundry Deployment Validation ===" -ForegroundColor Cyan
 Write-Host ""

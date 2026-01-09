@@ -65,7 +65,7 @@ stages:
     dependsOn: Build
     condition: succeeded()
     variables:
-      - group: 'foundry-dev-vars'  # Variable group for dev environment
+      - group: 'aifoundrycicd-dev-vars'  # {projectName}-dev-vars from config.naming.projectName
       # Expected variables in group:
       # - AZURE_AI_PROJECT_DEV
       # - AZURE_OPENAI_ENDPOINT_DEV
@@ -104,7 +104,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Test Existing Agent in Dev'
                   inputs:
-                    azureSubscription: 'azure-foundry-dev'
+                    azureSubscription: 'aifoundrycicd-dev'  # {projectName}-dev from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -165,7 +165,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Run Agent Evaluation'
                   inputs:
-                    azureSubscription: 'azure-foundry-test'
+                    azureSubscription: 'aifoundrycicd-test'  # {projectName}-test from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
@@ -187,7 +187,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: 'Run Red Team Testing'
                   inputs:
-                    azureSubscription: 'azure-foundry-prod'
+                    azureSubscription: 'aifoundrycicd-prod'  # {projectName}-prod from config.naming.projectName
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |

@@ -114,12 +114,13 @@ if ($UseConfig) {
     $config = Get-StarterConfig
     
     if ($config) {
-        $ResourceGroupBaseName = $config.azure.resourceGroup
+        # Derive resource group base name from project name
+        $ResourceGroupBaseName = "rg-$($config.naming.projectName)"
         $Location = $config.azure.location
         $ServicePrincipalName = "sp-$ResourceGroupBaseName"
         $AIProjectBaseName = $ResourceGroupBaseName
         
-        Write-Host "✅ Loaded configuration from starter-config.json" -ForegroundColor Green
+        Write-Host "OK: Loaded configuration from starter-config.json" -ForegroundColor Green
     }
     else {
         Write-Error "Could not load configuration. Run: ../configuration-management/configure-starter.ps1 -Interactive"
@@ -131,6 +132,7 @@ if ($UseConfig) {
 if ($CreateAll) {
     $CreateServicePrincipal = $true
     $CreateAIProjects = $true
+}
 Write-Host ""
 Write-Host "=== Azure AI Foundry Multi-Environment Resource Creation ===" -ForegroundColor Cyan
 Write-Host "Base Name: $ResourceGroupBaseName" -ForegroundColor Gray
@@ -138,87 +140,80 @@ Write-Host "Location: $Location" -ForegroundColor Gray
 Write-Host "Environment: $Environment" -ForegroundColor Gray
 Write-Host ""
 Write-Host "This orchestration coordinates these specialized skills:" -ForegroundColor Cyan
-Write-Host "  1. resource-groups skill - Creates resource groups" -ForegroundColor Gray
-if ($CreateServicePrincipal) {
-    Write-Host "  2. service-principal skill - Creates Service Principal with RBAC" -ForegroundColor Gray
-}
-if ($CreateAIProjects) {
-    Write-Host "  3. ai-foundry-resources skilllor Gray
+Write-Host "[Step 1: Resource Groups Skill]" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "This orchestration script will execute specialized skills:" -ForegroundColor Cyan
-Write-Host "  1. create-resource-groups.ps1 - Creates resource groups" -ForegroundColor Gray
-if ($CreateServicePrincipal) {
-    Write-Host "  2. create-service-principal.ps1 - Creates Service Principal with RBAC" -ForegroundColor Gray
-}
-if ($CreateAIProjects) {
-    Write-Host "[Step 1: Resource Groups Skill]" -ForegroundColor Yellow
-    Write-Host ""
     
-    $rgParams = @{
+$rgParams = @{
+    ResourceGroupBaseName = $ResourceGroupBaseName
+    Location              = $Location
+    Environment           = $Environment
+    OutputFormat          = 'text'
+}
+    
+if ($UseConfig) {
+    $rgParams.UseConfig = $true
+}
+    
+try {
+    & "$PSScriptRoot/../resource-groups/scripts/create-resource-groups.ps1" @rgParams
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  OK: Resource Groups skill completed successfully" -ForegroundColor Green
+        $results.Skills += @{ Name = "resource-groups"; Status = "Success" }
+        $results.Summary.Succeeded++
+    }
+    else {
+        Write-Host "  FAIL: Resource Groups skill failed" -ForegroundColor Red
+        $results.Skills += @{ Name = "resource-groups"; Status = "Failed" }
+        $results.Summary.Failed++
+    }
+}
+catch {
+    Write-Host "  FAIL: Resource Groups skill error: $_" -ForegroundColor Red
+    $results.Skills += @{ Name = "resource-groups"; Status = "Failed"; Error = $_.Exception.Message }
+    $results.Summary.Failed++
+}
+
+# Step 2: Service Principal
+if ($CreateServicePrincipal) {
+    Write-Host ""
+    Write-Host "[Step 2: Service Principal Skill]" -ForegroundColor Yellow
+    Write-Host ""
+        
+    $spParams = @{
+        ServicePrincipalName  = $ServicePrincipalName
         ResourceGroupBaseName = $ResourceGroupBaseName
-        Location              = $Location
         Environment           = $Environment
+        UpdateConfig          = $true
         OutputFormat          = 'text'
     }
-    
+        
     if ($UseConfig) {
-        $rgParams.UseConfig = $true
+        $spParams.UseConfig = $true
     }
-    
+        
     try {
-        & "$PSScriptRoot/../resource-groups/scripts/create-resource-groups.ps1" @rgParams
+        & "$PSScriptRoot/../service-principal/scripts/create-service-principal.ps1" @spParams
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  ✅ Resource Groups skill completed successfully" -ForegroundColor Green
-            $results.Skills += @{ Name = "resource-groups"; Status = "Success" }
+            Write-Host "  OK: Service Principal skill completed successfully" -ForegroundColor Green
+            $results.Skills += @{ Name = "service-principal"; Status = "Success" }
             $results.Summary.Succeeded++
         }
         else {
-            Write-Host "  ❌ Resource Groups skill failed" -ForegroundColor Red
-            $results.Skills += @{ Name = "resource-groups"; Status = "Failed" }
-            $results.Summary.Failed++
+            Write-Host "  WARN: Service Principal skill completed with warnings" -ForegroundColor Yellow
+            $results.Skills += @{ Name = "service-principal"; Status = "Warning" }
         }
     }
     catch {
-        Write-Host "  ❌ Resource Groups skill error: $_" -ForegroundColor Red
-        $results.Skills += @{ Name = "resource-groups"; Status = "Failed"; Error = $_.Exception.Message }
-        $results.Summary.Failed++
-            Add-ResourceResult -Tracker $results -ResourceType "Orchestration" -ResourceName "Resource Groups" -Status "Failed" -Message "Resource group creation failed with exit code $LASTEXITCODE"
-        }Host "[Step 2: Service Principal Skill]" -ForegroundColor Yellow
-        Write-Host ""
-        
-        $spParams = @{
-            ServicePrincipalName  = $ServicePrincipalName
-            ResourceGroupBaseName = $ResourceGroupBaseName
-            Environment           = $Environment
-            UpdateConfig          = $true
-            OutputFormat          = 'text'
-        }
-        
-        if ($UseConfig) {
-            $spParams.UseConfig = $true
-        }
-        
-        try {
-            & "$PSScriptRoot/../service-principal/scripts/create-service-principal.ps1" @spParams
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  ✅ Service Principal skill completed successfully" -ForegroundColor Green
-                $results.Skills += @{ Name = "service-principal"; Status = "Success" }
-                $results.Summary.Succeeded++
-            }
-            else {
-                Write-Host "  ⚠️  Service Principal skill completed with warnings" -ForegroundColor Yellow
-                $results.Skills += @{ Name = "service-principal"; Status = "Warning" }
-            }
-        }
-        catch {
-            Write-Host "  ⚠️  Service Principal skill error: $_" -ForegroundColor Yellow
-            $results.Skills += @{ Name = "service-principal"; Status = "Warning"; Error = $_.Exception.Message }
-            & "$PSScriptRoot/create-service-principal.ps1" @spParams
-            if ($LASTEXITCODE -eq 0) {
-                Add-ResourceResult -Tracker $results -ResourceType "Orchestration" -ResourceName "Service Principal" -Status "Created" -Message "Service Principal created successfully"
-            }
-            elHost "[Step 3: AI Foundry Resources Skill]" -ForegroundColor Yellow
-        Write-Host ""
+        Write-Host "  WARN: Service Principal skill error: $_" -ForegroundColor Yellow
+        $results.Skills += @{ Name = "service-principal"; Status = "Warning"; Error = $_.Exception.Message }
+    }
+}
+
+# Step 3: AI Foundry Resources
+if ($CreateAIProjects) {
+    Write-Host ""
+    Write-Host "[Step 3: AI Foundry Resources Skill]" -ForegroundColor Yellow
+    Write-Host ""
         
         # Get Service Principal AppId if available
         $spAppId = $null
@@ -246,85 +241,62 @@ if ($CreateAIProjects) {
         try {
             & "$PSScriptRoot/../ai-foundry-resources/scripts/create-ai-foundry-resources.ps1" @aifParams
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "  ✅ AI Foundry Resources skill completed successfully" -ForegroundColor Green
+                Write-Host "  OK: AI Foundry Resources skill completed successfully" -ForegroundColor Green
                 $results.Skills += @{ Name = "ai-foundry-resources"; Status = "Success" }
                 $results.Summary.Succeeded++
             }
             else {
-                Write-Host "  ❌ AI Foundry Resources skill failed" -ForegroundColor Red
+                Write-Host "  FAIL: AI Foundry Resources skill failed" -ForegroundColor Red
                 $results.Skills += @{ Name = "ai-foundry-resources"; Status = "Failed" }
                 $results.Summary.Failed++
             }
         }
         catch {
-            Write-Host "  ❌ AI Foundry Resources skill error: $_" -ForegroundColor Red
+            Write-Host "  FAIL: AI Foundry Resources skill error: $_" -ForegroundColor Red
             $results.Skills += @{ Name = "ai-foundry-resources"; Status = "Failed"; Error = $_.Exception.Message }
             $results.Summary.Failed++
         }
-        
-        try {
-          Host "=== Orchestration Summary ===" -ForegroundColor Cyan
-    Write-Host "Skills Succeeded: $($results.Summary.Succeeded)" -ForegroundColor Green
-    Write-Host "Skills Failed: $($results.Summary.Failed)" -ForegroundColor $(if ($results.Summary.Failed -gt 0) { "Red" } else { "Gray" })
-    Write-Host ""
+    }
+
+# Summary
+Write-Host "`n=== Orchestration Summary ===" -ForegroundColor Cyan
+Write-Host "Skills Succeeded: $($results.Summary.Succeeded)" -ForegroundColor Green
+Write-Host "Skills Failed: $($results.Summary.Failed)" -ForegroundColor $(if ($results.Summary.Failed -gt 0) { "Red" } else { "Gray" })
+Write-Host ""
     
-    if ($results.Skills.Count -gt 0) {
-        Write-Host "Skill Execution Details:" -ForegroundColor Gray
-        foreach ($skill in $results.Skills) {
+if ($results.Skills.Count -gt 0) {
+    Write-Host "Skill Execution Details:" -ForegroundColor Gray
+    foreach ($skill in $results.Skills) {
             $icon = switch ($skill.Status) {
-                'Success' { "✅" }
-                'Warning' { "⚠️ " }
-                'Failed'  { "❌" }
+                'Success' { "OK:" }
+                'Warning' { "WARN:" }
+                'Failed' { "FAIL:" }
             }
             $color = switch ($skill.Status) {
                 'Success' { "Green" }
                 'Warning' { "Yellow" }
-                'Failed'  { "Red" }
+                'Failed' { "Red" }
             }
             Write-Host "  $icon $($skill.Name): $($skill.Status)" -ForegroundColor $color
-        }
-        Write-Host ""
     }
-
-    # Output in requested format
-    if ($OutputFormat -eq 'json') {
-        $results | ConvertTo-Json -Depth 10
-    }
-
-    # Exit with appropriate code
-    if ($results.Summary.Failed -gt 0) {
-        Write-Host "❌ Resource creation orchestration completed with failures" -ForegroundColor Red
-        exit 1
-    }
-    elseif ($results.Summary.Succeeded -gt 0) {
-        Write-Host "✅ Resource creation orchestration completed successfully" -ForegroundColor Green
-        exit 0
-    }
-    else {
-        Write-Host "✅ All operations completed" -ForegroundColor Green
-    # ===== SUMMARY =====
-    Write-ResultSummary -Tracker $results -ShowDetails
-
-    # Output in requested format
-    if ($OutputFormat -eq 'json') {
-        ConvertTo-JsonOutput -Object $results
-    }
-
-    # Exit with appropriate code
-    if ($results.Summary.Failed -gt 0 -and $results.Summary.Created -eq 0) {
-        Write-StatusMessage "Resource creation orchestration failed" -Status Error -Indent 0
-        exit 1
-    }
-    elseif ($results.Summary.Created -gt 0) {
-        Write-StatusMessage "Resource creation orchestration completed successfully" -Status Success -Indent 0
-        exit 0
-    }
-    else {
-        Write-StatusMessage "All resources already exist or operations were skipped" -Status Info -Indent 0
-        exit 0
-    }
+    Write-Host ""
 }
-catch {
-    Write-Error "Resource creation orchestration error: $_"
-    exit 2
+
+# Output in requested format
+if ($OutputFormat -eq 'json') {
+    $results | ConvertTo-Json -Depth 10
+}
+
+# Exit with appropriate code
+if ($results.Summary.Failed -gt 0) {
+    Write-Host "FAIL: Resource creation orchestration completed with failures" -ForegroundColor Red
+    exit 1
+}
+elseif ($results.Summary.Succeeded -gt 0) {
+    Write-Host "OK: Resource creation orchestration completed successfully" -ForegroundColor Green
+    exit 0
+}
+else {
+    Write-Host "OK: All operations completed" -ForegroundColor Green
+    exit 0
 }

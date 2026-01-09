@@ -3,11 +3,13 @@
     "organizationUrl": "https://dev.azure.com/YOUR_ORG",
     "projectName": "YOUR_PROJECT"
   },
+  "naming": {
+    "projectName": ""
+  },
   "azure": {
     "subscriptionId": "00000000-0000-0000-0000-000000000000",
     "subscriptionName": "YOUR_SUBSCRIPTION_NAME",
     "tenantId": "00000000-0000-0000-0000-000000000000",
-    "resourceGroup": "rg-ai-foundry-starter",
     "location": "eastus",
     "aiFoundry": {
       "dev": {

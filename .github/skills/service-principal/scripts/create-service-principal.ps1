@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Creates an Azure Service Principal with workload identity federation for multi-environment access.
@@ -73,13 +73,13 @@ if ((Test-Path $azCliPath) -and ($env:Path -notlike "*$azCliPath*")) {
 
 # Load configuration if UseConfig is specified
 if ($UseConfig) {
-    . "$PSScriptRoot/../configuration-management/config-functions.ps1"
+    . "$PSScriptRoot/../../configuration-management/config-functions.ps1"
     $config = Get-StarterConfig
     
     if ($config) {
-        $ResourceGroupBaseName = $config.azure.resourceGroup
+        $ResourceGroupBaseName = "rg-$($config.naming.projectName)"
         $ServicePrincipalName = "sp-$ResourceGroupBaseName"
-        Write-Host "✅ Loaded configuration from starter-config.json" -ForegroundColor Green
+        Write-Host "[OK] Loaded configuration from starter-config.json" -ForegroundColor Green
     }
     else {
         Write-Error "Could not load configuration. Run: ../configuration-management/configure-starter.ps1 -Interactive"
@@ -144,7 +144,7 @@ try {
     if ($LASTEXITCODE -eq 0) {
         $appList = $appListJson | ConvertFrom-Json
         if ($appList -and $appList.Count -gt 0) {
-            Write-Host "  ✅ App registration already exists" -ForegroundColor Green
+            Write-Host "  [OK] App registration already exists" -ForegroundColor Green
             $appId = $appList[0].appId
             $appObjectId = $appList[0].id
             Write-Host "  Using existing AppId: $appId" -ForegroundColor Gray
@@ -167,7 +167,7 @@ try {
                 $app = $appJson | ConvertFrom-Json
                 $appId = $app.appId
                 $appObjectId = $app.id
-                Write-Host "  ✅ App registration created: $appId" -ForegroundColor Green
+                Write-Host "  [OK] App registration created: $appId" -ForegroundColor Green
                 
                 $result.ServicePrincipal.AppId = $appId
                 $result.ServicePrincipal.ObjectId = $appObjectId
@@ -178,7 +178,7 @@ try {
                 $spJson = az ad sp create --id $appId --only-show-errors 2>&1
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "  ✅ Service principal created" -ForegroundColor Green
+                    Write-Host "  [OK] Service principal created" -ForegroundColor Green
                     $result.ServicePrincipal.Status = "Created"
                     $result.ServicePrincipal.Message = "Successfully created"
                 }
@@ -216,7 +216,7 @@ try {
                 --only-show-errors 2>&1 | Out-Null
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "      ✅ Contributor role assigned" -ForegroundColor Green
+                Write-Host "      [OK] Contributor role assigned" -ForegroundColor Green
                 $roleResult.Roles += @{
                     Role    = "Contributor"
                     Scope   = $scope
@@ -224,7 +224,7 @@ try {
                 }
             }
             else {
-                Write-Host "      ⚠️  Contributor role assignment failed (may already exist)" -ForegroundColor Yellow
+                Write-Host "      [WARN] Contributor role assignment failed (may already exist)" -ForegroundColor Yellow
                 $roleResult.Roles += @{
                     Role    = "Contributor"
                     Scope   = $scope
@@ -236,11 +236,11 @@ try {
             
             # Note: Cognitive Services User role will be assigned after
             # AI Services resource is created (see create-ai-foundry-resources.ps1)
-            Write-Host "      ℹ️  Cognitive Services User role will be assigned after AI Services creation" -ForegroundColor Gray
+            Write-Host "      [INFO] Cognitive Services User role will be assigned after AI Services creation" -ForegroundColor Gray
         }
         
         Write-Host ""
-        Write-Host "  ⚠️  IMPORTANT: Federated Credentials" -ForegroundColor Yellow
+        Write-Host "  [WARN] IMPORTANT: Federated Credentials" -ForegroundColor Yellow
         Write-Host "  Federated credentials MUST be created AFTER service connections" -ForegroundColor Gray
         Write-Host "  are set up in Azure DevOps. You need the actual issuer and" -ForegroundColor Gray
         Write-Host "  subject values from the service connection." -ForegroundColor Gray
@@ -265,23 +265,32 @@ try {
         Write-Host ""
         
         # Update starter-config.json with Service Principal AppId
-        if ($UpdateConfig) {
-            $configPath = "$PSScriptRoot/../../../starter-config.json"
-            if (Test-Path $configPath) {
-                try {
-                    $configContent = Get-Content $configPath -Raw | ConvertFrom-Json
-                    $configContent.servicePrincipal.appId = $appId
-                    $configContent.servicePrincipal.tenantId = $tenantId
-                    $configContent.azure.subscriptionId = $subscriptionId
-                    $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
-                    $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
-                    Write-Host "  ✅ Configuration updated with SP AppId" -ForegroundColor Green
+        if ($UseConfig) {
+            try {
+                . "$PSScriptRoot/../../configuration-management/config-functions.ps1"
+                $currentConfig = Get-StarterConfig
+                
+                # Add servicePrincipal section if it doesn't exist
+                if (-not $currentConfig.servicePrincipal) {
+                    $currentConfig | Add-Member -MemberType NoteProperty -Name "servicePrincipal" -Value @{} -Force
                 }
-                catch {
-                    Write-Host "  ⚠️  Failed to update config: $_" -ForegroundColor Yellow
+                
+                $currentConfig.servicePrincipal = @{
+                    appId = $appId
+                    tenantId = $tenantId
+                    displayName = $ServicePrincipalName
+                    createdAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                 }
+                
+                Set-StarterConfig -Config $currentConfig
+                Write-Host "  [OK] Configuration updated with SP AppId" -ForegroundColor Green
+            }
+            catch {
+                Write-Host "  [WARN] Failed to update config: $_" -ForegroundColor Yellow
             }
         }
+        
+        # Output results
     }
     else {
         throw "Cannot list app registrations. Check permissions."
@@ -303,7 +312,7 @@ try {
     return $result
 }
 catch {
-    Write-Host "  ❌ Service Principal creation failed: $_" -ForegroundColor Red
+    Write-Host "  [ERROR] Service Principal creation failed: $_" -ForegroundColor Red
     Write-Host "  Migration can proceed with your current authentication" -ForegroundColor Gray
     $result.ServicePrincipal.Status = "Failed"
     $result.ServicePrincipal.Message = $_.Exception.Message

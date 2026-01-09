@@ -291,7 +291,8 @@ function Test-ConfigurationComplete {
     # Define required fields for each section
     $requiredFields = @{
         azureDevOps      = @("organizationUrl", "projectName")
-        azure            = @("subscriptionId", "tenantId", "resourceGroup", "location")
+        azure            = @("subscriptionId", "tenantId", "location")
+        naming           = @("projectName")
         servicePrincipal = @("appId", "tenantId")
     }
 
@@ -396,14 +397,15 @@ function Test-ConfigurationValidity {
 
     # Test resource group
     try {
-        $rg = az group show --name "$($config.azure.resourceGroup)-dev" --only-show-errors 2>$null | ConvertFrom-Json
+        $rgName = "rg-$($config.naming.projectName)-dev"
+        $rg = az group show --name $rgName --only-show-errors 2>$null | ConvertFrom-Json
         
         if ($rg) {
             $results.resources.valid = $true
             $results.resources.message = "Resource group exists: $($rg.name) in $($rg.location)"
         }
         else {
-            $results.resources.message = "Resource group not found: $($config.azure.resourceGroup)-dev"
+            $results.resources.message = "Resource group not found: $rgName"
         }
     }
     catch {

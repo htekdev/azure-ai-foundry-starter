@@ -202,7 +202,6 @@ try {
             }
 
             $config.azure.subscriptionName = Read-ConfigValue -Prompt "? Enter Azure subscription name" -Default "YOUR_SUBSCRIPTION_NAME"
-            $config.azure.resourceGroup = Read-ConfigValue -Prompt "? Enter resource group base name (will create {name}-dev, -test, -prod)" -Required
             $config.azure.location = Read-ConfigValue -Prompt "? Enter Azure region" -Default "eastus"
             
             # AI Foundry project endpoints (per LESSONS_LEARNED #9: format is https://<resource>.services.ai.azure.com/api/projects/<project>)

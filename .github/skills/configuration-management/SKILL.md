@@ -37,7 +37,8 @@ $config = Get-StarterConfig
 # Access values
 $org = $config.azureDevOps.organizationUrl
 $project = $config.azureDevOps.projectName
-$rgBase = $config.azure.resourceGroup
+# Derive resource group base from project name
+$rgBase = "rg-$($config.naming.projectName)"
 $devEndpoint = $config.azure.aiFoundry.dev.projectEndpoint
 ```
 
@@ -53,7 +54,6 @@ $devEndpoint = $config.azure.aiFoundry.dev.projectEndpoint
     "subscriptionId": "00000000-0000-0000-0000-000000000000",
     "subscriptionName": "YOUR_SUBSCRIPTION",
     "tenantId": "00000000-0000-0000-0000-000000000000",
-    "resourceGroup": "rg-base-name",
     "location": "eastus",
     "aiFoundry": {
       "dev": { "projectEndpoint": "https://RESOURCE.services.ai.azure.com/api/projects/PROJECT" },
@@ -116,7 +116,7 @@ $config = Get-StarterConfig
 
 # Use in resource creation
 az group create `
-  --name "$($config.azure.resourceGroup)-dev" `
+  --name "rg-$($config.naming.projectName)-dev" \
   --location $config.azure.location
 
 # Use in Azure DevOps commands
@@ -172,8 +172,10 @@ $config = Get-StarterConfig
 
 # Create resource groups for all environments
 @('dev', 'test', 'prod') | ForEach-Object {
+  # Derive resource group name from project name
+  $rgName = "rg-$($config.naming.projectName)-$_"
   az group create `
-    --name "$($config.azure.resourceGroup)-$_" `
+    --name $rgName `
     --location $config.azure.location
 }
 ```
@@ -213,7 +215,7 @@ az pipelines variable-group create `
 - ✅ Version control `starter-config.json`
 - ✅ Back up before updates: `Set-StarterConfig -CreateBackup`
 - ❌ Don't commit Service Principal secrets
-- ✅ Use environment suffixes: `{resourceGroup}-dev`, `-test`, `-prod`
+- ✅ Use environment suffixes: `rg-{projectName}-dev`, `-test`, `-prod` (automatically derived)
 - ✅ Follow Azure naming rules (lowercase, no special chars)
 
 ## Troubleshooting

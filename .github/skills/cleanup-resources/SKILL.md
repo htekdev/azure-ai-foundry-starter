@@ -211,7 +211,7 @@ cd .github/skills/cleanup-resources/scripts
 # 1. Load configuration to verify
 $config = Get-Content .\starter-config.json | ConvertFrom-Json
 Write-Host "Subscription: $($config.azure.subscriptionName)"
-Write-Host "Resource Group Base: $($config.azure.resourceGroup)"
+Write-Host "Resource Group Base: rg-$($config.naming.projectName)"
 
 # 2. Preview deletion
 .\cleanup-resources.ps1 -DryRun

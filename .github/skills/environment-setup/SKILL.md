@@ -56,7 +56,8 @@ $config = Get-StarterConfig
 $org = $config.azureDevOps.organizationUrl
 $project = $config.azureDevOps.projectName
 $subscriptionId = $config.azure.subscriptionId
-$resourceGroup = $config.azure.resourceGroup
+# Derive resource group name from project name
+$resourceGroup = "rg-$($config.naming.projectName)"
 
 Write-Host "✓ Configuration loaded"
 ```
@@ -66,25 +67,25 @@ Write-Host "✓ Configuration loaded"
 **IMPORTANT:** Variable group names must match exactly what's referenced in pipeline YAML files!
 
 ```powershell
-# Define environment-specific configurations
+# Define environment-specific configurations with derived resource groups
 $environments = @{
     "dev" = @{
         projectEndpoint = $config.azure.aiFoundry.dev.projectEndpoint
         projectName = $config.azure.aiFoundry.dev.projectName
         modelDeployment = "gpt-4o"  # or from config if specified
-        resourceGroup = $resourceGroup
+        resourceGroup = "$resourceGroup-dev"  # rg-{projectName}-dev
     }
     "test" = @{
         projectEndpoint = $config.azure.aiFoundry.test.projectEndpoint
         projectName = $config.azure.aiFoundry.test.projectName
         modelDeployment = "gpt-4o"
-        resourceGroup = $resourceGroup
+        resourceGroup = "$resourceGroup-test"  # rg-{projectName}-test
     }
     "prod" = @{
         projectEndpoint = $config.azure.aiFoundry.prod.projectEndpoint
         projectName = $config.azure.aiFoundry.prod.projectName
         modelDeployment = "gpt-4o"
-        resourceGroup = $resourceGroup
+        resourceGroup = "$resourceGroup-prod"  # rg-{projectName}-prod
     }
 }
 
@@ -186,12 +187,12 @@ Write-Host "5. Configure approval timeout and policy"
 
 **Critical:** Pipeline YAML files reference these exact names!
 
-- `foundry-dev-vars` - Development environment
-- `foundry-test-vars` - Test environment
-- `foundry-prod-vars` - Production environment
+- `{projectName}-dev-vars` - Development environment (where {projectName} is from config.naming.projectName)
+- `{projectName}-test-vars` - Test environment
+- `{projectName}-prod-vars` - Production environment
 
 **Naming rules:**
-- ✅ Use hyphens: `foundry-dev-vars`
+- ✅ Use hyphens: `{projectName}-dev-vars` (from config.naming.projectName)
 - ❌ No underscores: `foundry_dev_vars`
 - ❌ No spaces: `foundry dev vars`
 - ❌ No special characters
@@ -205,7 +206,7 @@ Each variable group contains:
 | `AZURE_AI_PROJECT_ENDPOINT` | AI Foundry project endpoint URL | `https://aif-foundry-dev.cognitiveservices.azure.com` |
 | `AZURE_AI_PROJECT_NAME` | AI Foundry project name | `aif-foundry-dev` |
 | `AZURE_AI_MODEL_DEPLOYMENT_NAME` | Deployed model name | `gpt-4o` |
-| `AZURE_RESOURCE_GROUP` | Azure resource group | `rg-ai-foundry-demo` |
+| `AZURE_RESOURCE_GROUP` | Azure resource group (environment-specific) | `rg-{projectName}-dev` |
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | `12345678-1234-1234-1234-123456789012` |
 
 ## Troubleshooting

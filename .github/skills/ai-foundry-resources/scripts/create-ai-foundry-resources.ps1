@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Creates Azure AI Foundry resources (AI Services and Projects) for multi-environment deployment.
@@ -84,11 +84,11 @@ if ((Test-Path $azCliPath) -and ($env:Path -notlike "*$azCliPath*")) {
 
 # Load configuration if UseConfig is specified
 if ($UseConfig) {
-    . "$PSScriptRoot/../configuration-management/config-functions.ps1"
+    . "$PSScriptRoot/../../configuration-management/config-functions.ps1"
     $config = Get-StarterConfig
     
     if ($config) {
-        $ResourceGroupBaseName = $config.azure.resourceGroup
+        $ResourceGroupBaseName = "rg-$($config.naming.projectName)"
         $Location = $config.azure.location
         $AIProjectBaseName = $ResourceGroupBaseName
         
@@ -97,7 +97,7 @@ if ($UseConfig) {
             $ServicePrincipalAppId = $config.servicePrincipal.appId
         }
         
-        Write-Host "✅ Loaded configuration from starter-config.json" -ForegroundColor Green
+        Write-Host "[OK] Loaded configuration from starter-config.json" -ForegroundColor Green
     }
     else {
         Write-Error "Could not load configuration. Run: ../configuration-management/configure-starter.ps1 -Interactive"
@@ -151,8 +151,8 @@ try {
     
     foreach ($env in $environments) {
         $rgName = "$ResourceGroupBaseName-$env"
-        $resourceName = "aif-foundry-$env"
-        $projectName = "aif-project-$env"
+        $resourceName = "$AIProjectBaseName-$env"
+        $projectName = "$AIProjectBaseName-project-$env"
         
         $envResult = @{
             Environment     = $env
@@ -180,13 +180,15 @@ try {
         
         try {
             # ===== CREATE AI SERVICES RESOURCE =====
+            $ErrorActionPreference = 'Continue'
             $existingResource = az cognitiveservices account show `
                 --name $resourceName `
                 --resource-group $rgName `
-                --only-show-errors 2>&1
+                2>$null
+            $ErrorActionPreference = 'Stop'
             
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "    ✅ AI Services resource already exists" -ForegroundColor Green
+            if ($LASTEXITCODE -eq 0 -and $existingResource) {
+                Write-Host "    [OK] AI Services resource already exists" -ForegroundColor Green
                 $envResult.AIServices.Status = "Skipped"
                 $envResult.AIServices.Message = "Already exists"
                 $results.Summary.Skipped++
@@ -194,6 +196,7 @@ try {
             else {
                 # Create AI Services resource (kind: AIServices with custom domain)
                 Write-Host "    Creating AI Services resource..." -ForegroundColor Gray
+                Write-Host "    Command: az cognitiveservices account create --name $resourceName --resource-group $rgName --kind AIServices --sku S0 --location $Location --custom-domain $resourceName --yes" -ForegroundColor Gray
                 $resourceJson = az cognitiveservices account create `
                     --name $resourceName `
                     --resource-group $rgName `
@@ -201,11 +204,11 @@ try {
                     --sku S0 `
                     --location $Location `
                     --custom-domain $resourceName `
-                    --yes `
-                    --only-show-errors 2>&1
+                    --yes 2>&1
                 
+                Write-Host "    Exit code: $LASTEXITCODE" -ForegroundColor Gray
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "    ✅ AI Services resource created" -ForegroundColor Green
+                    Write-Host "    [OK] AI Services resource created" -ForegroundColor Green
                     $envResult.AIServices.Status = "Created"
                     $envResult.AIServices.Message = "Created in $Location"
                     $results.Summary.Created++
@@ -219,14 +222,16 @@ try {
             Start-Sleep -Seconds 3
             
             # ===== CREATE AI FOUNDRY PROJECT =====
+            $ErrorActionPreference = 'Continue'
             $existingProject = az cognitiveservices account project show `
                 --name $resourceName `
                 --resource-group $rgName `
                 --project-name $projectName `
-                --only-show-errors 2>&1
+                2>$null
+            $ErrorActionPreference = 'Stop'
             
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "    ✅ Project already exists" -ForegroundColor Green
+            if ($LASTEXITCODE -eq 0 -and $existingProject) {
+                Write-Host "    [OK] Project already exists" -ForegroundColor Green
                 
                 # Try to get existing project endpoint
                 try {
@@ -236,7 +241,7 @@ try {
                     Write-Host "    Project Endpoint: $projectEndpoint" -ForegroundColor Cyan
                 }
                 catch {
-                    Write-Host "    ⚠️  Could not parse existing project endpoint" -ForegroundColor Yellow
+                    Write-Host "    [WARN] Could not parse existing project endpoint" -ForegroundColor Yellow
                 }
                 
                 $envResult.Project.Status = "Skipped"
@@ -254,7 +259,7 @@ try {
                     --only-show-errors 2>&1
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "    ✅ Project created successfully" -ForegroundColor Green
+                    Write-Host "    [OK] Project created successfully" -ForegroundColor Green
                     
                     # Parse project details to get endpoint
                     try {
@@ -277,16 +282,16 @@ try {
                                     $configContent.azure.aiFoundry.$env.projectEndpoint = $projectEndpoint
                                     $configContent.metadata.lastModified = (Get-Date -Format "yyyy-MM-dd")
                                     $configContent | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
-                                    Write-Host "    ✅ Configuration updated with project endpoint" -ForegroundColor Green
+                                    Write-Host "    [OK] Configuration updated with project endpoint" -ForegroundColor Green
                                 }
                                 catch {
-                                    Write-Host "    ⚠️  Failed to update config: $_" -ForegroundColor Yellow
+                                    Write-Host "    [WARN] Failed to update config: $_" -ForegroundColor Yellow
                                 }
                             }
                         }
                     }
                     catch {
-                        Write-Host "    ⚠️  Could not parse project endpoint" -ForegroundColor Yellow
+                        Write-Host "    [WARN] Could not parse project endpoint" -ForegroundColor Yellow
                         $envResult.Project.Status = "Created"
                         $envResult.Project.Message = "Created but endpoint not parsed"
                         $results.Summary.Created++
@@ -309,25 +314,25 @@ try {
                     --only-show-errors 2>&1 | Out-Null
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "    ✅ Cognitive Services User role assigned" -ForegroundColor Green
+                    Write-Host "    [OK] Cognitive Services User role assigned" -ForegroundColor Green
                     $envResult.RBAC.Status = "Assigned"
                     $envResult.RBAC.Message = "Cognitive Services User on $resourceName"
                 }
                 else {
-                    Write-Host "    ⚠️  RBAC assignment failed (may already exist)" -ForegroundColor Yellow
+                    Write-Host "    [WARN] RBAC assignment failed (may already exist)" -ForegroundColor Yellow
                     $envResult.RBAC.Status = "Skipped"
                     $envResult.RBAC.Message = "Failed or already exists"
                 }
             }
             else {
-                Write-Host "    ℹ️  No Service Principal specified, skipping RBAC" -ForegroundColor Gray
+                Write-Host "    [INFO] No Service Principal specified, skipping RBAC" -ForegroundColor Gray
                 $envResult.RBAC.Status = "Skipped"
                 $envResult.RBAC.Message = "No Service Principal specified"
             }
             
         }
         catch {
-            Write-Host "    ❌ Failed to create AI resources for $env`: $_" -ForegroundColor Red
+            Write-Host "    [ERROR] Failed to create AI resources for $env`: $_" -ForegroundColor Red
             Write-Host "    Error details: $($_.Exception.Message)" -ForegroundColor Gray
             $envResult.AIServices.Status = "Failed"
             $envResult.AIServices.Message = $_.Exception.Message
@@ -353,15 +358,15 @@ try {
     
     # Exit with appropriate code
     if ($results.Summary.Failed -gt 0) {
-        Write-Host "❌ Some AI resources failed to create" -ForegroundColor Red
+        Write-Host "[ERROR] Some AI resources failed to create" -ForegroundColor Red
         exit 1
     }
     elseif ($results.Summary.Created -gt 0) {
-        Write-Host "✅ AI Foundry resource creation completed successfully" -ForegroundColor Green
+        Write-Host "[OK] AI Foundry resource creation completed successfully" -ForegroundColor Green
         exit 0
     }
     else {
-        Write-Host "✅ All AI resources already exist" -ForegroundColor Green
+        Write-Host "[OK] All AI resources already exist" -ForegroundColor Green
         exit 0
     }
 }

@@ -14,7 +14,6 @@ This document provides the complete template structure for `starter-config.json`
         "subscriptionId": "",
         "subscriptionName": "",
         "tenantId": "",
-        "resourceGroup": "",
         "location": "eastus",
         "aiFoundry": {
             "dev": {

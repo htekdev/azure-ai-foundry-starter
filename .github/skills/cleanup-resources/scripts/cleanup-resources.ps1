@@ -60,8 +60,10 @@ Write-Host "`nThe following resources will be PERMANENTLY DELETED:" -ForegroundC
 
 # Check resource groups
 Write-Host "`n[RESOURCE GROUPS]:" -ForegroundColor Cyan
-$rgPattern = "rg-ai-foundry-starter*"
-$resourceGroups = az group list --query "[?starts_with(name, 'rg-ai-foundry-starter')].{Name:name, Location:location}" -o json | ConvertFrom-Json
+# Derive resource group pattern from project name
+$rgBase = "rg-$($config.naming.projectName)"
+$rgPattern = "$rgBase*"
+$resourceGroups = az group list --query "[?starts_with(name, '$rgBase')].{Name:name, Location:location}" -o json | ConvertFrom-Json
 
 if ($resourceGroups.Count -gt 0) {
     foreach ($rg in $resourceGroups) {
@@ -220,7 +222,7 @@ Write-Host "     az resource list --subscription $subscriptionId" -ForegroundCol
 Write-Host ""
 Write-Host "  3. (Optional) Clean up Azure DevOps resources:" -ForegroundColor Gray
 Write-Host "     - Delete repository: azure-ai-foundry-app" -ForegroundColor DarkGray
-Write-Host "     - Delete service connections: azure-foundry-dev/test/prod" -ForegroundColor DarkGray
+Write-Host "     - Delete service connections: {projectName}-dev/test/prod" -ForegroundColor DarkGray
 Write-Host "     - Delete variable groups: foundry-dev/test/prod-vars" -ForegroundColor DarkGray
 Write-Host "     - Delete pipelines" -ForegroundColor DarkGray
 Write-Host ""

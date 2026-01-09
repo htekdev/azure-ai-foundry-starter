@@ -95,7 +95,6 @@ After reset, the config file contains:
         "subscriptionId": "",
         "subscriptionName": "",
         "tenantId": "",
-        "resourceGroup": "",
         "location": "eastus",
         "aiFoundry": {
             "dev": {

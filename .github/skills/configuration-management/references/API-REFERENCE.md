@@ -86,8 +86,11 @@ Get-ConfigValue -Path <string> [-Default <object>] [-ConfigPath <string>]
 ```powershell
 # Get single values
 $org = Get-ConfigValue -Path "azureDevOps.organizationUrl"
-$rgName = Get-ConfigValue -Path "azure.resourceGroup"
+$projectName = Get-ConfigValue -Path "naming.projectName"
 $devEndpoint = Get-ConfigValue -Path "azure.aiFoundry.dev.projectEndpoint"
+
+# Derive resource group from project name
+$rgName = "rg-$projectName-dev"
 
 # Get with default
 $location = Get-ConfigValue -Path "azure.location" -Default "eastus"
@@ -121,7 +124,7 @@ Set-ConfigValue -Path "azure.aiFoundry.dev.projectEndpoint" -Value "https://..."
 
 # Multiple updates
 Set-ConfigValue -Path "azure.location" -Value "eastus2"
-Set-ConfigValue -Path "azure.resourceGroup" -Value "new-rg-name"
+Set-ConfigValue -Path "naming.projectName" -Value "mynewproject"
 ```
 
 **Notes:**
@@ -170,7 +173,8 @@ if (-not (Test-ConfigurationComplete)) {
 Each section has required fields:
 
 - **azureDevOps**: `organizationUrl`, `projectName`
-- **azure**: `subscriptionId`, `tenantId`, `resourceGroup`, `location`
+- **azure**: `subscriptionId`, `tenantId`, `location`
+- **naming**: `projectName` (resource groups derived as `rg-{projectName}`)
 - **servicePrincipal**: `appId`, `tenantId`
 
 Fields are considered invalid if:
@@ -225,7 +229,7 @@ if ($allValid) {
 
 1. **Azure DevOps** - Verifies project exists and is accessible
 2. **Azure** - Confirms correct subscription is active
-3. **Resources** - Checks if resource group exists (checks `{resourceGroup}-dev`)
+3. **Resources** - Checks if resource group exists (checks `rg-{projectName}-dev`)
 
 **Requirements:**
 - Azure CLI must be authenticated
@@ -312,7 +316,7 @@ if ($customField) {
 ```powershell
 $updates = @{
     "azure.location" = "westus2"
-    "azure.resourceGroup" = "new-rg-name"
+    "naming.projectName" = "mynewproject"
     "servicePrincipal.appId" = "00000000-0000-..."
 }
 

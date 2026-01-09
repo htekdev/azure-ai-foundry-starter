@@ -7,8 +7,8 @@
 #
 # What gets deleted:
 # - Repository: azure-ai-foundry-app
-# - Service Connections: azure-foundry-dev/test/prod
-# - Variable Groups: foundry-dev/test/prod-vars
+# - Service Connections: {projectName}-dev/test/prod
+# - Variable Groups: {projectName}-dev/test/prod-vars
 # - Pipelines: All associated pipelines
 # - Configuration: starter-config.json (reset to template)
 #
@@ -60,6 +60,7 @@ if (Test-Path $ConfigPath) {
 $organization = $config.azureDevOps.organization
 $project = $config.azureDevOps.project
 $repository = $config.azureDevOps.repository
+$projectName = $config.naming.projectName
 
 # ============================================================================
 # Check Azure DevOps Login
@@ -109,7 +110,7 @@ if (-not $OnlyConfig) {
     # Check Service Connections
     Write-Host "`n[SERVICE CONNECTIONS]:" -ForegroundColor Cyan
     try {
-        $serviceEndpoints = az devops service-endpoint list --query "[?contains(name, 'foundry')].{Name:name, Id:id}" -o json | ConvertFrom-Json
+        $serviceEndpoints = az devops service-endpoint list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
         if ($serviceEndpoints -and $serviceEndpoints.Count -gt 0) {
             foreach ($endpoint in $serviceEndpoints) {
                 Write-Host "  [X] $($endpoint.Name)" -ForegroundColor Red
@@ -124,7 +125,7 @@ if (-not $OnlyConfig) {
     # Check Variable Groups
     Write-Host "`n[VARIABLE GROUPS]:" -ForegroundColor Cyan
     try {
-        $variableGroups = az pipelines variable-group list --query "[?contains(name, 'foundry')].{Name:name, Id:id}" -o json | ConvertFrom-Json
+        $variableGroups = az pipelines variable-group list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
         if ($variableGroups -and $variableGroups.Count -gt 0) {
             foreach ($vg in $variableGroups) {
                 Write-Host "  [X] $($vg.Name)" -ForegroundColor Red
@@ -139,7 +140,7 @@ if (-not $OnlyConfig) {
     # Check Pipelines
     Write-Host "`n[PIPELINES]:" -ForegroundColor Cyan
     try {
-        $pipelines = az pipelines list --query "[?contains(name, 'foundry') || contains(name, 'azure-ai')].{Name:name, Id:id}" -o json | ConvertFrom-Json
+        $pipelines = az pipelines list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
         if ($pipelines -and $pipelines.Count -gt 0) {
             foreach ($pipeline in $pipelines) {
                 Write-Host "  [X] $($pipeline.Name)" -ForegroundColor Red
@@ -196,7 +197,7 @@ if (-not $OnlyConfig) {
     # Delete Pipelines
     Write-Host "`n[PIPELINES] Deleting Pipelines..." -ForegroundColor Cyan
     try {
-        $pipelines = az pipelines list --query "[?contains(name, 'foundry') || contains(name, 'azure-ai')].{Name:name, Id:id}" -o json | ConvertFrom-Json
+        $pipelines = az pipelines list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
         if ($pipelines -and $pipelines.Count -gt 0) {
             foreach ($pipeline in $pipelines) {
                 Write-Host "  [DELETE] Deleting: $($pipeline.Name)..." -ForegroundColor Yellow
@@ -217,7 +218,7 @@ if (-not $OnlyConfig) {
     # Delete Variable Groups
     Write-Host "`n[VARIABLE GROUPS] Deleting Variable Groups..." -ForegroundColor Cyan
     try {
-        $variableGroups = az pipelines variable-group list --query "[?contains(name, 'foundry')].{Name:name, Id:id}" -o json | ConvertFrom-Json
+        $variableGroups = az pipelines variable-group list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
         if ($variableGroups -and $variableGroups.Count -gt 0) {
             foreach ($vg in $variableGroups) {
                 Write-Host "  [DELETE] Deleting: $($vg.Name)..." -ForegroundColor Yellow
@@ -238,7 +239,7 @@ if (-not $OnlyConfig) {
     # Delete Service Connections
     Write-Host "`n[SERVICE CONNECTIONS] Deleting Service Connections..." -ForegroundColor Cyan
     try {
-        $serviceEndpoints = az devops service-endpoint list --query "[?contains(name, 'foundry')].{Name:name, Id:id}" -o json | ConvertFrom-Json
+        $serviceEndpoints = az devops service-endpoint list --query "[?contains(name, '$projectName')].{Name:name, Id:id}" -o json | ConvertFrom-Json
         if ($serviceEndpoints -and $serviceEndpoints.Count -gt 0) {
             foreach ($endpoint in $serviceEndpoints) {
                 Write-Host "  [DELETE] Deleting: $($endpoint.Name)..." -ForegroundColor Yellow
@@ -309,6 +310,9 @@ if (-not $SkipConfig) {
             servicePrincipal = @{
                 appId = ""
                 displayName = "sp-rg-ai-foundry-starter"
+            }
+            naming = @{
+                projectName = ""
             }
             resources = @{
                 resourceGroupPrefix = "rg-ai-foundry-starter"

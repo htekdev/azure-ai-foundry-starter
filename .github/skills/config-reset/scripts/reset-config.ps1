@@ -45,6 +45,9 @@ $ErrorActionPreference = "Stop"
 
 # Template configuration (default state)
 $templateConfig = @{
+    naming = @{
+        projectName = ""
+    }
     azureDevOps = @{
         organizationUrl = ""
         projectName = ""
@@ -53,7 +56,6 @@ $templateConfig = @{
         subscriptionId = ""
         subscriptionName = ""
         tenantId = ""
-        resourceGroup = ""
         location = "eastus"
         aiFoundry = @{
             dev = @{
@@ -105,7 +107,7 @@ function Show-Summary {
     
     Write-Host "`nTemplate Structure:" -ForegroundColor Yellow
     Write-Host "  - Azure DevOps: organizationUrl, projectName"
-    Write-Host "  - Azure: subscriptionId, subscriptionName, tenantId, resourceGroup, location"
+    Write-Host "  - Azure: subscriptionId, subscriptionName, tenantId, location"
     Write-Host "  - AI Foundry: dev/test/prod projectEndpoints"
     Write-Host "  - Service Principal: appId, tenantId"
     Write-Host "  - Metadata: version, description, lastModified"
