@@ -102,20 +102,50 @@ foreach ($env in $environments) {
         "AZURE_SUBSCRIPTION_ID" = $subscriptionId
     }
     
-    # Build variables parameter for Azure CLI
-    $varsParam = ($variables.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " "
-    
+    # Create variable group with a single dummy variable first
+    # (Azure CLI doesn't support creating empty variable groups)
     $result = az pipelines variable-group create `
         --org $orgUrl `
         --project $project `
         --name $vgName `
-        --variables $varsParam `
+        --variables "PLACEHOLDER=temp" `
         --authorize true `
         --description "Variables for $env environment" `
         2>&1
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  [OK] Created variable group: $vgName" -ForegroundColor Green
+        
+        # Get the variable group ID
+        $vgId = az pipelines variable-group list `
+            --org $orgUrl `
+            --project $project `
+            --query "[?name=='$vgName'].id" `
+            -o tsv
+        
+        # Add each variable individually
+        foreach ($key in $variables.Keys) {
+            $value = $variables[$key]
+            Write-Host "    Adding variable: $key" -ForegroundColor Gray
+            az pipelines variable-group variable create `
+                --org $orgUrl `
+                --project $project `
+                --group-id $vgId `
+                --name $key `
+                --value $value `
+                2>&1 | Out-Null
+        }
+        
+        # Delete the placeholder variable
+        az pipelines variable-group variable delete `
+            --org $orgUrl `
+            --project $project `
+            --group-id $vgId `
+            --name "PLACEHOLDER" `
+            --yes `
+            2>&1 | Out-Null
+        
+        Write-Host "  [OK] Added all variables to $vgName" -ForegroundColor Green
     } else {
         Write-Host "  [ERROR] Failed to create variable group: $vgName" -ForegroundColor Red
         Write-Host "  $result" -ForegroundColor Red

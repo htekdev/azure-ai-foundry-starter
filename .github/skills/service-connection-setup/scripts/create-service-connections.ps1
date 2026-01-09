@@ -96,8 +96,13 @@ Write-Host ""
 
 Write-Host "[Creating Service Connections with Workload Identity Federation]" -ForegroundColor Yellow
 
-# Check if ADO_TOKEN is set
-if (-not $env:ADO_TOKEN) {
+# Check if ADO_TOKEN or AZURE_DEVOPS_EXT_PAT is set
+$adoToken = $env:ADO_TOKEN
+if (-not $adoToken) {
+    $adoToken = $env:AZURE_DEVOPS_EXT_PAT
+}
+
+if (-not $adoToken) {
     Write-Host "[ERROR] ADO_TOKEN environment variable not set" -ForegroundColor Red
     Write-Host "Please set it first using: `$env:ADO_TOKEN = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query 'accessToken' -o tsv" -ForegroundColor Yellow
     exit 1
@@ -157,7 +162,7 @@ foreach ($env in $environments) {
     
     try {
         $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers @{
-            "Authorization" = "Bearer $env:ADO_TOKEN"
+            "Authorization" = "Bearer $adoToken"
             "Content-Type" = "application/json"
         } -Body $body -ErrorAction Stop
         
@@ -182,6 +187,17 @@ Write-Host ""
 # Create federated credentials for each service connection
 Write-Host "[Creating Federated Credentials]" -ForegroundColor Yellow
 
+# Get ADO token for REST API calls
+$adoToken = $env:AZURE_DEVOPS_EXT_PAT
+if (-not $adoToken) {
+    $adoToken = az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query "accessToken" -o tsv
+}
+
+$headers = @{
+    Authorization = "Bearer $adoToken"
+    'Content-Type' = 'application/json'
+}
+
 foreach ($env in $environments) {
     $scName = "$projectName-$env"
     $credName = "sc-$projectName-$env"
@@ -199,34 +215,48 @@ foreach ($env in $environments) {
     
     Write-Host "  [INFO] Creating federated credential: $credName" -ForegroundColor Blue
     
-    # CRITICAL: These values must match exactly what Azure DevOps sends
-    $issuer = "https://vstoken.dev.azure.com/$orgName"
-    $subject = "sc://$orgName/$project/$scName"
-    
-    # Create temp file for JSON to avoid escaping issues
-    $tempFile = [System.IO.Path]::GetTempFileName()
-    @{
-        name = $credName
-        issuer = $issuer
-        subject = $subject
-        description = "Federated credential for $scName service connection"
-        audiences = @("api://AzureADTokenExchange")
-    } | ConvertTo-Json | Set-Content $tempFile -Encoding UTF8
-    
-    $credResult = az ad app federated-credential create `
-        --id $spAppId `
-        --parameters "@$tempFile" `
-        2>&1
-    
-    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  [OK] Created federated credential: $credName" -ForegroundColor Green
-        Write-Host "      Issuer: $issuer" -ForegroundColor Gray
-        Write-Host "      Subject: $subject" -ForegroundColor Gray
-    } else {
-        Write-Host "  [ERROR] Failed to create federated credential: $credName" -ForegroundColor Red
-        Write-Host "  $credResult" -ForegroundColor Red
+    # CRITICAL: Get the actual issuer and subject from the service connection
+    # Azure DevOps now uses workload identity federation with dynamic issuer/subject
+    try {
+        $scUrl = "https://dev.azure.com/$orgName/$project/_apis/serviceendpoint/endpoints?endpointNames=$scName&api-version=7.1-preview.4"
+        $scData = Invoke-RestMethod -Uri $scUrl -Headers $headers -Method Get
+        $scDetails = $scData.value[0]
+        
+        $issuer = $scDetails.authorization.parameters.workloadIdentityFederationIssuer
+        $subject = $scDetails.authorization.parameters.workloadIdentityFederationSubject
+        
+        if (-not $issuer -or -not $subject) {
+            Write-Host "  [ERROR] Could not retrieve issuer/subject from service connection $scName" -ForegroundColor Red
+            continue
+        }
+        
+        # Create temp file for JSON to avoid escaping issues
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        @{
+            name = $credName
+            issuer = $issuer
+            subject = $subject
+            description = "Federated credential for $scName service connection"
+            audiences = @("api://AzureADTokenExchange")
+        } | ConvertTo-Json | Set-Content $tempFile -Encoding UTF8
+        
+        $credResult = az ad app federated-credential create `
+            --id $spAppId `
+            --parameters "@$tempFile" `
+            2>&1
+        
+        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] Created federated credential: $credName" -ForegroundColor Green
+            Write-Host "      Issuer: $issuer" -ForegroundColor Gray
+            Write-Host "      Subject: $subject" -ForegroundColor Gray
+        } else {
+            Write-Host "  [ERROR] Failed to create federated credential: $credName" -ForegroundColor Red
+            Write-Host "  $credResult" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "  [ERROR] Failed to retrieve service connection details: $_" -ForegroundColor Red
     }
 }
 
