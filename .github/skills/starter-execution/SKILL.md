@@ -25,7 +25,7 @@ Before using this orchestrator:
 
 - **1 Repository**: `azure-ai-foundry-app` with template application code
 - **3 Service Connections**: dev/test/prod with Workload Identity Federation (no secrets!)
-- **3 Variable Groups**: `foundry-{env}-vars` with environment-specific configuration
+- **3 Variable Groups**: `{projectName}-{env}-vars` with environment-specific configuration (projectName from config)
 - **3 Environments**: dev, test, production with approval gates
 - **3+ Pipelines**: Agent creation, evaluation, and red team testing
 
@@ -141,7 +141,7 @@ az ad app federated-credential list --id $config.servicePrincipal.appId -o table
 **Purpose**: Create variable groups and environments for all deployment stages
 
 **Key Actions**:
-- Create 3 variable groups: `foundry-dev-vars`, `foundry-test-vars`, `foundry-prod-vars`
+- Create 3 variable groups: `{projectName}-dev-vars`, `{projectName}-test-vars`, `{projectName}-prod-vars` (using config.naming.projectName)
 - Configure environment-specific variables (endpoints, model names, connection strings)
 - Create 3 environments: `dev`, `test`, `production`
 - Authorize variable groups for pipeline access

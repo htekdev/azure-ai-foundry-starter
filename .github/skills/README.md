@@ -260,12 +260,12 @@ All Azure resources follow a consistent naming pattern derived from `config.nami
 - `ai-foundry-starter-prod`
 
 ### Variable Groups
-**Pattern**: `foundry-{env}-vars`
+**Pattern**: `{projectName}-{env}-vars` (where projectName is from config.naming.projectName)
 
-**Fixed names**:
-- `foundry-dev-vars`
-- `foundry-test-vars`
-- `foundry-prod-vars`
+**Example with projectName="aifoundrycicd"**:
+- `aifoundrycicd-dev-vars`
+- `aifoundrycicd-test-vars`
+- `aifoundrycicd-prod-vars`
 
 **Important**: 
 - ✅ All resource names are derived from configuration

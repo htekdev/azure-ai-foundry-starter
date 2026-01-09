@@ -59,7 +59,7 @@ stages:
     dependsOn: Build
     condition: succeeded()
     variables:
-      - group: 'foundrycicd-dev-vars'  # {projectName}-dev-vars from config.naming.projectName
+      - group: 'REPLACE_WITH_YOUR_PROJECTNAME-dev-vars'  # {projectName}-dev-vars from config.naming.projectName
     jobs:
       - deployment: DeployAgentDev
         displayName: 'Deploy Agent to Dev'
@@ -119,7 +119,7 @@ stages:
     dependsOn: Dev
     condition: succeeded()
     variables:
-      - group: 'foundrycicd-test-vars'
+      - group: 'REPLACE_WITH_YOUR_PROJECTNAME-test-vars'  # {projectName}-test-vars from config.naming.projectName
     jobs:
       - deployment: DeployAgentTest
         displayName: 'Deploy Agent to Test'
@@ -179,7 +179,7 @@ stages:
     dependsOn: Test
     condition: succeeded()
     variables:
-      - group: 'foundrycicd-prod-vars'
+      - group: 'REPLACE_WITH_YOUR_PROJECTNAME-prod-vars'  # {projectName}-prod-vars from config.naming.projectName
     jobs:
       - deployment: DeployAgentProd
         displayName: 'Deploy Agent to Production'

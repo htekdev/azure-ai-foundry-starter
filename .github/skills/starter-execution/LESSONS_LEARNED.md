@@ -71,7 +71,7 @@ This document captures critical learnings from Azure DevOps repository migration
 **Approach:** Create via REST API with proper structure
 - **Success factors:**
   - Include all required variables upfront
-  - Name consistently (e.g., `foundry-dev-vars`, `foundry-test-vars`, `foundry-prod-vars`)
+  - Name consistently using config.naming.projectName (e.g., `{projectName}-dev-vars`, `{projectName}-test-vars`, `{projectName}-prod-vars`)
   - Store service connection names for reference
   - Use REST API for creation and updates
 
@@ -197,7 +197,7 @@ az ad app federated-credential create --id $spAppId --parameters "$env:TEMP\fed-
 # ✅ WORKS - Literal service connection name
 - stage: Dev
   variables:
-    - group: 'foundry-dev-vars'  # Can still use variable group for other variables
+    - group: 'REPLACE_WITH_YOUR_PROJECTNAME-dev-vars'  # Use {projectName}-dev-vars from config
   jobs:
     - deployment: DeployAgentDev
       steps:
@@ -215,12 +215,13 @@ az ad app federated-credential create --id $spAppId --parameters "$env:TEMP\fed-
 **Problem:** Pipeline YAML expects different variable group names than what was created
 
 **What happened:**
-- Created: `foundry-dev-vars`, `foundry-test-vars`, `foundry-prod-vars`
-- Pipeline expected: `agent-dev-vars`, `agent-test-vars`, `agent-prod-vars`
+- Created: `{projectName}-dev-vars`, `{projectName}-test-vars`, `{projectName}-prod-vars` (from config.naming.projectName)
+- Pipeline expected: hardcoded names that don't match the config
 
 **Solution:** ALWAYS update the YAML files to match created infrastructure, not the other way around
 ```powershell
-(Get-Content pipeline.yml) -replace "agent-dev-vars", "foundry-dev-vars" | Set-Content pipeline.yml
+# Replace placeholder with actual projectName from config
+(Get-Content pipeline.yml) -replace "REPLACE_WITH_YOUR_PROJECTNAME", $projectName | Set-Content pipeline.yml
 ```
 
 **Lesson:** Configuration management should define the names, and YAML should be updated to match. Don't try to rename Azure DevOps resources to match YAML - it's error-prone.

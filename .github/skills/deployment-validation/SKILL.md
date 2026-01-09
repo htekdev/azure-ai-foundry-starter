@@ -158,7 +158,8 @@ Write-Host ""
 ```powershell
 Write-Host "Validating Variable Groups..." -ForegroundColor Yellow
 
-$expectedVGs = @("foundry-dev-vars", "foundry-test-vars", "foundry-prod-vars")
+# Build expected variable group names from config
+$expectedVGs = @("$projectName-dev-vars", "$projectName-test-vars", "$projectName-prod-vars")
 $foundVGs = 0
 
 foreach ($vgName in $expectedVGs) {
@@ -409,7 +410,9 @@ az role assignment create --assignee $spAppId --role "Cognitive Services User" -
 
 **Solution:** Update variable group with correct values:
 ```powershell
-$vgId = az pipelines variable-group list --query "[?name=='foundry-dev-vars'].id" -o tsv
+# Get variable group ID using projectName from config
+$vgName = "$projectName-dev-vars"  # Uses config.naming.projectName
+$vgId = az pipelines variable-group list --query "[?name=='$vgName'].id" -o tsv
 az pipelines variable-group variable update --id $vgId --name "AZURE_AI_PROJECT_ENDPOINT" --value "https://..."
 ```
 

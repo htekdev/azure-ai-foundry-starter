@@ -226,7 +226,7 @@ trigger:
       - src/agents/*
 
 variables:
-  - group: foundry-dev-vars  # References variable group
+  - group: REPLACE_WITH_YOUR_PROJECTNAME-dev-vars  # References variable group: {projectName}-dev-vars
 
 stages:
   - stage: Dev
@@ -277,15 +277,16 @@ az devops service-endpoint update --id $scId --enable-for-all true
 ```
 
 #### 3. Variable Group Not Found
-**Error:** `The pipeline is not valid. Could not find variable group 'foundry-dev-vars'`
+**Error:** `The pipeline is not valid. Could not find variable group '{projectName}-dev-vars'`
 
 **Solution:** Verify variable groups exist and are authorized:
 ```powershell
 # List variable groups
 az pipelines variable-group list --query "[].name" --output tsv
 
-# Authorize variable group
-$vgId = az pipelines variable-group list --query "[?name=='foundry-dev-vars'].id" --output tsv
+# Authorize variable group (use your actual projectName from config)
+$vgName = "$projectName-dev-vars"  # Replace with your config.naming.projectName
+$vgId = az pipelines variable-group list --query "[?name=='$vgName'].id" --output tsv
 az pipelines variable-group update --id $vgId --authorize true
 ```
 

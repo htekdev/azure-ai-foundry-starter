@@ -24,9 +24,9 @@ Run the cleanup script interactively:
 Removes all Azure DevOps artifacts created during deployment:
 
 - **Repository**: azure-ai-foundry-app
-- **Service Connections**: azure-foundry-dev, azure-foundry-test, azure-foundry-prod
-- **Variable Groups**: foundry-dev-vars, foundry-test-vars, foundry-prod-vars
-- **Pipelines**: All pipelines matching the foundry pattern
+- **Service Connections**: {projectName}-dev, {projectName}-test, {projectName}-prod (from config.naming.projectName)
+- **Variable Groups**: {projectName}-dev-vars, {projectName}-test-vars, {projectName}-prod-vars (from config.naming.projectName)
+- **Pipelines**: All pipelines matching the project pattern
 
 ### 2. Configuration Reset
 
