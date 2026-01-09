@@ -169,15 +169,21 @@ az pipelines environment list -o table
 **Purpose**: Create CI/CD pipelines from template YAML files
 
 **Key Actions**:
+- **Update pipeline YAML files** - Automatically replaces `REPLACE_WITH_YOUR_PROJECTNAME` with `config.naming.projectName`
+- **Commit and push changes** - Updates YAML files in repository with correct variable group names
 - Create pipeline: `Azure AI Foundry - Create Agent`
 - Create pipeline: `Azure AI Foundry - Agent Evaluation`
 - Create pipeline: `Azure AI Foundry - Red Team`
 - Link pipelines to repository branch
 - Configure with `--skip-first-run` flag
 
+**Critical**: Automated script updates YAML files to match variable group names created in Phase 4!
+
 **Direct Usage**:
 ```powershell
 cd .github/skills/pipeline-setup
+./scripts/create-pipelines.ps1 -UseConfig
+```
 # Follow skill documentation for detailed steps
 ```
 

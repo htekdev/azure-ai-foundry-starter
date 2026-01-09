@@ -218,13 +218,14 @@ az ad app federated-credential create --id $spAppId --parameters "$env:TEMP\fed-
 - Created: `{projectName}-dev-vars`, `{projectName}-test-vars`, `{projectName}-prod-vars` (from config.naming.projectName)
 - Pipeline expected: hardcoded names that don't match the config
 
-**Solution:** ALWAYS update the YAML files to match created infrastructure, not the other way around
+**Solution (NOW AUTOMATED):** The `pipeline-setup` skill automatically updates YAML files to match created infrastructure
 ```powershell
-# Replace placeholder with actual projectName from config
+# This is now handled automatically by scripts/create-pipelines.ps1
+# It replaces placeholder with actual projectName from config
 (Get-Content pipeline.yml) -replace "REPLACE_WITH_YOUR_PROJECTNAME", $projectName | Set-Content pipeline.yml
 ```
 
-**Lesson:** Configuration management should define the names, and YAML should be updated to match. Don't try to rename Azure DevOps resources to match YAML - it's error-prone.
+**Lesson:** Configuration management should define the names, and YAML should be updated to match. Don't try to rename Azure DevOps resources to match YAML - it's error-prone. **The pipeline-setup script now handles this automatically.**
 
 ### 4. **Service Connection Authorization**
 **Problem:** Pipeline validation failed with "service connection not authorized"

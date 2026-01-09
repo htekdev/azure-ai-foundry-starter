@@ -74,6 +74,99 @@ if (-not $repo) {
 Write-Host "  [OK] Repository found: $repo" -ForegroundColor Green
 Write-Host ""
 
+# Update pipeline YAML files with actual projectName
+Write-Host "[Updating Pipeline YAML Files]" -ForegroundColor Yellow
+
+# Get repository clone URL
+$repoDetails = az repos show --repository $repo --org $orgUrl --project $project 2>$null | ConvertFrom-Json
+if (-not $repoDetails) {
+    Write-Host "  [ERROR] Could not get repository details" -ForegroundColor Red
+    exit 1
+}
+
+$remoteUrl = $repoDetails.remoteUrl
+
+# Create temporary directory for repository
+$tempDir = Join-Path $env:TEMP "ado-pipeline-update-$(Get-Random)"
+New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+
+try {
+    # Clone repository
+    Write-Host "  [INFO] Cloning repository to update YAML files..." -ForegroundColor Blue
+    Push-Location $tempDir
+    
+    # Clone with authentication
+    git clone $remoteUrl . 2>&1 | Out-Null
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [ERROR] Failed to clone repository" -ForegroundColor Red
+        exit 1
+    }
+    
+    # Check if placeholder exists in YAML files
+    $yamlFiles = @(
+        ".azure-pipelines/createagentpipeline.yml",
+        ".azure-pipelines/agentconsumptionpipeline.yml"
+    )
+    
+    $filesUpdated = 0
+    foreach ($yamlFile in $yamlFiles) {
+        if (Test-Path $yamlFile) {
+            $content = Get-Content $yamlFile -Raw
+            
+            # Check if placeholder exists
+            if ($content -match "REPLACE_WITH_YOUR_PROJECTNAME") {
+                Write-Host "  [INFO] Updating $yamlFile with projectName: $projectName" -ForegroundColor Blue
+                
+                # Replace placeholder with actual projectName
+                $updatedContent = $content -replace "REPLACE_WITH_YOUR_PROJECTNAME", $projectName
+                Set-Content -Path $yamlFile -Value $updatedContent -NoNewline
+                
+                $filesUpdated++
+            } else {
+                Write-Host "  [OK] $yamlFile already updated (no placeholder found)" -ForegroundColor Green
+            }
+        } else {
+            Write-Host "  [WARN] $yamlFile not found in repository" -ForegroundColor Yellow
+        }
+    }
+    
+    # Commit and push changes if any files were updated
+    if ($filesUpdated -gt 0) {
+        Write-Host "  [INFO] Committing changes..." -ForegroundColor Blue
+        
+        git config user.email "azuredevops@automation.local"
+        git config user.name "Azure DevOps Automation"
+        git add -A
+        git commit -m "Update pipeline YAML files with projectName: $projectName" 2>&1 | Out-Null
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [INFO] Pushing changes to repository..." -ForegroundColor Blue
+            git push origin main 2>&1 | Out-Null
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  [OK] Updated $filesUpdated pipeline YAML file(s) with projectName: $projectName" -ForegroundColor Green
+            } else {
+                Write-Host "  [ERROR] Failed to push changes to repository" -ForegroundColor Red
+                exit 1
+            }
+        } else {
+            Write-Host "  [WARN] No changes to commit (files may already be updated)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "  [OK] All pipeline YAML files are already up to date" -ForegroundColor Green
+    }
+    
+    Pop-Location
+} finally {
+    # Clean up temporary directory
+    if (Test-Path $tempDir) {
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Write-Host ""
+
 # Define pipelines to create
 $pipelines = @(
     @{

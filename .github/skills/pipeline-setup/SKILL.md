@@ -30,6 +30,26 @@ Before using this skill, ensure:
 - **Pipeline definitions** linked to your repository
 - **Automated triggers** (optional) for continuous deployment
 
+## Automated Script
+
+This skill includes `scripts/create-pipelines.ps1` which automates the entire pipeline setup process:
+
+**What it does automatically**:
+1. ✅ **Updates pipeline YAML files** - Replaces `REPLACE_WITH_YOUR_PROJECTNAME` placeholder with actual `config.naming.projectName`
+2. ✅ **Commits and pushes changes** - Updates YAML files in the repository
+3. ✅ **Creates pipelines** - Sets up pipelines from the updated YAML files
+
+**Usage**:
+```powershell
+cd .github/skills/pipeline-setup
+./scripts/create-pipelines.ps1 -UseConfig
+```
+
+**Why is this needed?**
+- Variable groups are named `{projectName}-{env}-vars` (e.g., `myproject-dev-vars`)
+- Pipeline YAML files must reference the correct variable group names
+- The script ensures consistency between created infrastructure and pipeline configuration
+
 ## Pipeline Templates Available
 
 The template application includes these pipeline YAML files:
@@ -52,6 +72,7 @@ $config = Get-StarterConfig
 # Extract values
 $org = $config.azureDevOps.organizationUrl
 $project = $config.azureDevOps.projectName
+$projectName = $config.naming.projectName
 $repoName = "azure-ai-foundry-app"  # Your repository name
 
 # Verify repository exists
@@ -64,22 +85,46 @@ if (-not $repoExists) {
 
 Write-Host "✓ Configuration loaded"
 Write-Host "✓ Repository found: $repoName"
+Write-Host "✓ Project name from config: $projectName"
 ```
 
-### Step 2: List Available Pipeline Templates
+### Step 2: Update Pipeline YAML Files (Automated)
 
+**Important**: The pipeline YAML files contain placeholders that need to be replaced with your actual project name.
+
+The `create-pipelines.ps1` script **automatically**:
+1. Clones the repository temporarily
+2. Replaces `REPLACE_WITH_YOUR_PROJECTNAME` with `$projectName` from config
+3. Commits and pushes the updated YAML files back to the repository
+4. Creates the pipelines from the updated YAML files
+
+**Example replacement**:
+```yaml
+# Before (in repository)
+variables:
+  - group: 'REPLACE_WITH_YOUR_PROJECTNAME-dev-vars'
+
+# After (automated replacement)
+variables:
+  - group: 'myproject-dev-vars'  # Where myproject = config.naming.projectName
+```
+
+**Manual alternative** (if needed):
 ```powershell
-Write-Host "`nAvailable pipeline templates in repository:"
+# Clone repository
+git clone https://dev.azure.com/$org/$project/_git/$repoName
+cd $repoName
 
-# List YAML files in .azure-pipelines directory
-$yamlFiles = az repos show --repository $repoName | ConvertFrom-Json
-$files = az repos list-branches --repository $repoName | ConvertFrom-Json
-
-# Note: You can also check directly in the repository
-Set-Location "C:\Repos\ado\azure-ai-foundry-app"  # Adjust to your local path
-Get-ChildItem -Path ".azure-pipelines" -Filter "*.yml" | ForEach-Object {
-    Write-Host "  - $($_.Name)"
+# Replace placeholders in YAML files
+$yamlFiles = Get-ChildItem -Path ".azure-pipelines" -Filter "*.yml"
+foreach ($file in $yamlFiles) {
+    (Get-Content $file.FullName) -replace "REPLACE_WITH_YOUR_PROJECTNAME", $projectName | Set-Content $file.FullName
 }
+
+# Commit and push
+git add .azure-pipelines/*.yml
+git commit -m "Update pipeline YAML files with projectName: $projectName"
+git push origin main
 ```
 
 ### Step 3: Create Pipelines from Templates
