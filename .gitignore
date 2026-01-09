@@ -1,1 +1,3 @@
 *.backup*
+# Temporary script output files
+sp-app-info-*.json

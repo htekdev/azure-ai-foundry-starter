@@ -259,9 +259,11 @@ try {
             federatedCredential = "To be created after service connection (see LESSONS_LEARNED.md #1)"
             createdAt           = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
         }
-        $appInfoFile = "$PSScriptRoot/sp-app-info-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
-        $appInfo | ConvertTo-Json -Depth 10 | Out-File -FilePath $appInfoFile -Encoding UTF8
-        Write-Host "  App info saved to: $appInfoFile" -ForegroundColor Gray
+        
+        Write-Host "  Service Principal Details:" -ForegroundColor Gray
+        Write-Host "    AppId: $appId" -ForegroundColor Gray
+        Write-Host "    ObjectId: $appObjectId" -ForegroundColor Gray
+        Write-Host "    TenantId: $tenantId" -ForegroundColor Gray
         Write-Host ""
         
         # Update starter-config.json with Service Principal AppId
