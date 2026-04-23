@@ -10,7 +10,7 @@
 
 **Architecture:**
 - **v1:** Users clone external repository, copy files manually
-- **v2:** All code included in `template-app/` - no external cloning needed
+- **v2:** All code included in `src/` - no external cloning needed
 
 **Terminology:**
 - "Migration" → "Starter"
@@ -19,7 +19,7 @@
 
 ### ✨ New Features
 
-1. **Complete Application Template** (`template-app/`)
+1. **Complete Application Template** (`src/`)
    - Full Python AI agent application
    - Multi-stage Azure DevOps pipeline (DEV/TEST/PROD)
    - All dependencies and configuration files
@@ -71,7 +71,7 @@
 2. **Simplified Workflow**
    - Removed external repository cloning steps
    - Eliminated file copying between repositories
-   - Direct deployment from `template-app/`
+   - Direct deployment from `src/`
 
 3. **Better Testing**
    - Import validation for Python modules

@@ -10,7 +10,7 @@ Orchestrates the complete deployment of the Azure AI Foundry starter template to
 
 ## Overview
 
-End-to-end orchestration skill that coordinates five specialized skills to deploy the Azure AI Foundry starter template from `template-app/` to Azure DevOps.
+End-to-end orchestration skill that coordinates five specialized skills to deploy the Azure AI Foundry starter template from `src/` to Azure DevOps.
 
 ### Prerequisites
 
@@ -90,7 +90,7 @@ Write-Host "✅ Authentication complete"
 
 **Key Actions**:
 - Create repository `azure-ai-foundry-app`
-- Initialize git and push template code from `template-app/`
+- Initialize git and push template code from `src/`
 - Create `.env` file from `sample.env`
 
 **Direct Usage**:
@@ -322,7 +322,7 @@ $env:AZURE_DEVOPS_EXT_PAT = $env:ADO_TOKEN
 - **Skip first run**: Use `--skip-first-run` when creating pipelines for control
 - **Test incrementally**: Validate each phase before proceeding
 - **Monitor first execution**: Watch logs for the initial Create Agent pipeline run
-- **Use feedback mechanism**: Report issues via [template-app/FEEDBACK.md](../../../template-app/FEEDBACK.md)
+- **Use feedback mechanism**: Report issues via [FEEDBACK.md](../../../FEEDBACK.md)
 
 ## Related Skills
 
@@ -345,5 +345,5 @@ $env:AZURE_DEVOPS_EXT_PAT = $env:ADO_TOKEN
 - **[docs/execution-guide.md](../../../docs/execution-guide.md)** - GitHub Copilot usage patterns
 - **[docs/troubleshooting.md](../../../docs/troubleshooting.md)** - All 12 critical lessons learned
 - **[docs/az-devops-cli-reference.md](../../../docs/az-devops-cli-reference.md)** - Azure DevOps CLI command reference
-- **[template-app/README.md](../../../template-app/README.md)** - Template application documentation
-- **[template-app/FEEDBACK.md](../../../template-app/FEEDBACK.md)** - Submit feedback and issues
+- **[README.md](../../../README.md)** - Template application documentation
+- **[FEEDBACK.md](../../../FEEDBACK.md)** - Submit feedback and issues

@@ -5,7 +5,7 @@ description: Creates Azure DevOps repository and pushes the ready-to-use Azure A
 
 # Repository Setup for Azure AI Foundry
 
-This skill handles **creating the Azure DevOps repository** and **pushing the template application code** from the `template-app/` directory.
+This skill handles **creating the Azure DevOps repository** and **pushing the template application code** from the `src/` directory.
 
 ## When to use this skill
 
@@ -21,7 +21,7 @@ Before using this skill, ensure:
 - ✅ Configuration loaded (use `configuration-management` skill first)
 - ✅ Azure DevOps authentication configured (bearer token set)
 - ✅ Azure DevOps CLI configured with organization and project defaults
-- ✅ Template application exists in `template-app/` directory
+- ✅ Template application exists in `src/` directory
 
 ## What This Skill Creates
 
@@ -50,8 +50,8 @@ az devops configure --defaults organization=$org project=$project
 ### Step 2: Prepare Template Application
 
 ```powershell
-# Navigate to template-app directory
-$templatePath = "$PSScriptRoot/../../../template-app"
+# Navigate to repository root directory (relative to this skill's location: .github/skills/repository-setup/)
+$templatePath = "$PSScriptRoot/../../.."
 Set-Location $templatePath
 
 # Initialize git if not already initialized
@@ -184,5 +184,5 @@ This skill works together with:
 
 - [docs/starter-guide.md](../../../docs/starter-guide.md) - Complete deployment guide
 - [docs/quick-start.md](../../../docs/quick-start.md) - Fast track guide
-- [template-app/README.md](../../../template-app/README.md) - Template application documentation
-- [template-app/FEEDBACK.md](../../../template-app/FEEDBACK.md) - Submit feedback about the template
+- [README.md](../../../README.md) - Template application documentation
+- [FEEDBACK.md](../../../FEEDBACK.md) - Submit feedback about the template
