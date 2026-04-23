@@ -1,6 +1,7 @@
 ---
 name: cleanup-devops
 description: Cleans up Azure DevOps resources (repositories, service connections, variable groups, pipelines) and resets configuration files. Use when you need to remove Azure DevOps artifacts after testing or to prepare for a fresh deployment of the Azure AI Foundry Starter template.
+license: Apache-2.0
 ---
 
 # Cleanup Azure DevOps Resources

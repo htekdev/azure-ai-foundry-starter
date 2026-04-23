@@ -1,6 +1,7 @@
 ---
 name: environment-validation
 description: Validates the Azure AI Foundry starter deployment environment prerequisites including tool versions, authentication status, connectivity, and resource availability. Use this when setting up or troubleshooting deployment environment, checking prerequisites, or validating configuration before starting deployment.
+license: Apache-2.0
 ---
 
 # Environment Validation for Azure AI Foundry Starter

@@ -1,6 +1,7 @@
 ---
 name: configuration-management
 description: Manages centralized configuration for Azure AI Foundry starter deployment including organization names, resource names, project names, and all other customizable values. Use this skill first to set up configuration, or when you need to retrieve/update deployment settings.
+license: Apache-2.0
 ---
 
 # Configuration Management for Azure AI Foundry Starter

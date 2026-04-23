@@ -1,6 +1,7 @@
 ---
 name: config-reset
 description: Resets starter-config.json to its default template state with automatic backup. Use when you need to clear all configuration values and start fresh, when the config file becomes corrupted, after testing/cleanup, or to prepare for a new deployment of the Azure AI Foundry Starter template.
+license: Apache-2.0
 ---
 
 # Config Reset

@@ -1,6 +1,7 @@
 ---
 name: github-agent-creator
 description: Creates custom GitHub Copilot agents (.github/agents/*.agent.md) that define specialized personas, responsibilities, and tool orchestration. Use when you need agents for testing, documentation, security, or deployment. Teaches separation of concerns - agents define WHO/WHAT/WHY, skills define HOW.
+license: Apache-2.0
 ---
 
 # GitHub Agent Creator

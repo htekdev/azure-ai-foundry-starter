@@ -1,6 +1,7 @@
 ---
 name: deployment-validation
 description: Validates the complete Azure AI Foundry deployment by checking repositories, service connections, variable groups, environments, pipelines, and optionally running the first agent deployment. This skill provides comprehensive verification of the deployment setup.
+license: Apache-2.0
 ---
 
 # Deployment Validation for Azure AI Foundry

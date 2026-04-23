@@ -1,6 +1,7 @@
 ---
 name: pipeline-setup
 description: Creates Azure DevOps CI/CD pipelines from the template YAML files. This skill creates pipelines for agent creation, testing, and deployment automation using the ready-to-use pipeline definitions.
+license: Apache-2.0
 ---
 
 # Pipeline Setup for Azure AI Foundry

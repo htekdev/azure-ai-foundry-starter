@@ -1,6 +1,7 @@
 ---
 name: service-connection-setup
 description: Creates Azure DevOps service connections with Workload Identity Federation (no secrets!) and configures federated credentials for the Service Principal. This skill sets up secure authentication between Azure DevOps and Azure using OpenID Connect.
+license: Apache-2.0
 ---
 
 # Service Connection Setup for Azure AI Foundry

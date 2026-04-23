@@ -1,6 +1,7 @@
 ---
 name: pipeline-monitor
 description: Monitors Azure DevOps pipeline execution status, retrieves logs, parses errors, and determines success/failure. Polls pipeline runs until completion and provides detailed error analysis. Use for automated pipeline monitoring and debugging.
+license: Apache-2.0
 ---
 
 # Pipeline Monitor Skill

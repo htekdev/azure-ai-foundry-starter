@@ -1,6 +1,7 @@
 ---
 name: environment-setup
 description: Creates Azure DevOps variable groups and environments for dev, test, and production. This skill configures environment-specific variables and approval gates required for CI/CD pipelines.
+license: Apache-2.0
 ---
 
 # Environment Setup for Azure AI Foundry

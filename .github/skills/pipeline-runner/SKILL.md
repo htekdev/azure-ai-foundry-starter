@@ -1,6 +1,7 @@
 ---
 name: pipeline-runner
 description: Triggers and runs Azure DevOps pipelines via Azure DevOps CLI. Queues pipelines with parameters, monitors initial start status, and returns run ID for tracking. Use when you need to execute ADO pipelines programmatically.
+license: Apache-2.0
 ---
 
 # Pipeline Runner Skill

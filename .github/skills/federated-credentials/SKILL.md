@@ -1,6 +1,7 @@
 ---
 name: federated-credentials
 description: Manages federated credentials for Azure DevOps service connections using Workload Identity Federation. Retrieves actual issuer/subject from service connections and creates/updates federated credentials on Service Principals.
+license: Apache-2.0
 ---
 
 # Federated Credentials Management for Azure DevOps Service Connections

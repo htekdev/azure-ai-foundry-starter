@@ -1,6 +1,7 @@
 ---
 name: repository-setup
 description: Creates Azure DevOps repository and pushes the ready-to-use Azure AI Foundry template application code. This skill handles git initialization, repository creation via Azure DevOps CLI, and pushing the template code with proper authentication.
+license: Apache-2.0
 ---
 
 # Repository Setup for Azure AI Foundry
